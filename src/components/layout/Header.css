@@ -43,4 +43,6 @@
 
 .header__link--active {
 	color: var(--color-text-primary);
+	text-decoration: underline;
+	text-underline-offset: 6px;
 }

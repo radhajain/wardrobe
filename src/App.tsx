@@ -4,6 +4,7 @@ import { PiecesPage } from './pages/PiecesPage';
 import { OutfitsPage } from './pages/OutfitsPage';
 import { BuilderPage } from './pages/BuilderPage';
 import { StylistPage } from './pages/StylistPage';
+import { RecommendedPage } from './pages/RecommendedPage';
 import './App.css';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
 					<Route path="/builder" element={<BuilderPage />} />
 					<Route path="/builder/:id" element={<BuilderPage />} />
 					<Route path="/stylist" element={<StylistPage />} />
+					<Route path="/recommended" element={<RecommendedPage />} />
 				</Routes>
 			</Layout>
 		</BrowserRouter>

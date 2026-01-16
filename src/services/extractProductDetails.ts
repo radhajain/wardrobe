@@ -14,6 +14,7 @@ export async function extractProductDetails(
 	if (signal?.aborted) {
 		throw new DOMException('Aborted', 'AbortError');
 	}
+	const systemInstruction = `You are an expert at extracting structured clothing product details from e-commerce web pages.`;
 	const prompt = `Analyze this product URL and page content to extract clothing item details.
 
 URL: ${productUrl}
@@ -34,12 +35,13 @@ Important:
 - If you can't determine a field, use an empty string`;
 
 	const result = await generateStructured({
-		model: 'gemini-3-flash-preview',
+		systemInstruction,
 		prompt,
 		schema: ProductDetailsSchema,
 		options: {
 			temperature: 0.1,
 			tools: [{ urlContext: {} }, { googleSearch: {} }],
+			maxTokens: 2048,
 		},
 		signal,
 	});

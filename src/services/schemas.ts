@@ -43,3 +43,52 @@ export type UserReflectionsResponse = z.infer<typeof UserReflectionsSchema>;
 export type OutfitSuggestionResponse = z.infer<typeof OutfitSuggestionSchema>;
 export type ProductDetailsResponse = z.infer<typeof ProductDetailsSchema>;
 export type ImageBoundsResponse = z.infer<typeof ImageBoundsSchema>;
+
+/**
+ * Schema for AI-generated piece suggestions
+ */
+export const PieceSuggestionsSchema = z
+	.array(
+		z.object({
+			description: z
+				.string()
+				.describe(
+					'Brief description of the piece type, e.g., "Burgundy cropped jacket"'
+				),
+			type: z.string().describe('Clothing type, e.g., "jacket", "dress"'),
+			color: z.string().describe('Primary color of the piece'),
+			style: z
+				.string()
+				.describe('Brief style description (materials, fit, details)'),
+			rationale: z
+				.string()
+				.describe('Why this piece would complement the wardrobe'),
+			compatiblePieceIds: z
+				.array(z.number())
+				.describe('IDs of existing wardrobe pieces this would work with'),
+		})
+	)
+	.min(3)
+	.max(5);
+
+/**
+ * Schema for product search results from Gemini with Google Search
+ */
+export const ProductSearchResultsSchema = z
+	.array(
+		z.object({
+			name: z.string(),
+			retailer: z.string(),
+			price: z.number().nullable(),
+			currency: z.string().default('USD'),
+			url: z.string(),
+			imageUrl: z.string().nullable(),
+		})
+	)
+	.min(3)
+	.max(10);
+
+export type PieceSuggestionsResponse = z.infer<typeof PieceSuggestionsSchema>;
+export type ProductSearchResultsResponse = z.infer<
+	typeof ProductSearchResultsSchema
+>;

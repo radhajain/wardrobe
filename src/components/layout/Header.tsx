@@ -49,6 +49,16 @@ export const Header = () => {
 							Stylist
 						</NavLink>
 					</li>
+					<li>
+						<NavLink
+							to="/recommended"
+							className={({ isActive }) =>
+								isActive ? 'header__link header__link--active' : 'header__link'
+							}
+						>
+							Recommended
+						</NavLink>
+					</li>
 				</ul>
 			</nav>
 		</header>

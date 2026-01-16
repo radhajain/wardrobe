@@ -2,7 +2,7 @@ import { GoogleGenAI, ToolListUnion } from '@google/genai';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-3-flash-preview';
 
 let client: GoogleGenAI | null = null;
 
@@ -26,15 +26,17 @@ function getClient(): GoogleGenAI {
  * Generate structured JSON output with Zod schema validation
  */
 export async function generateStructured<T>({
+	systemInstruction,
 	prompt,
 	schema,
 	options,
 	model,
 	signal,
 }: {
+	systemInstruction?: string;
 	prompt: string;
 	schema: z.ZodSchema<T>;
-	options?: { temperature?: number; tools?: ToolListUnion };
+	options?: { temperature?: number; tools?: ToolListUnion; maxTokens?: number };
 	model?: string;
 	signal?: AbortSignal;
 }): Promise<T> {
@@ -46,6 +48,8 @@ export async function generateStructured<T>({
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const jsonSchema = zodToJsonSchema(schema as any) as object;
 
+	console.log({ jsonSchema });
+
 	// Create a promise that rejects when the signal is aborted
 	const abortPromise = signal
 		? new Promise<never>((_, reject) => {
@@ -55,16 +59,21 @@ export async function generateStructured<T>({
 		  })
 		: null;
 
+	const config = {
+		temperature: options?.temperature ?? 0.7,
+		tools: options?.tools ?? [],
+		responseMimeType: 'application/json',
+		systemInstruction: systemInstruction,
+		responseJsonSchema: jsonSchema,
+		maxOutputTokens: options?.maxTokens ?? 20048,
+	};
+
+	console.log({ config });
+
 	const requestPromise = getClient().models.generateContent({
 		model: model ?? MODEL,
 		contents: prompt,
-		config: {
-			responseMimeType: 'application/json',
-			responseJsonSchema: jsonSchema,
-			// responseSchema: jsonSchema,
-			temperature: options?.temperature ?? 0.7,
-			tools: options?.tools ?? [],
-		},
+		config,
 	});
 
 	// Race between the request and abort signal

@@ -165,7 +165,7 @@ ${
 	historyContext ? `CONVERSATION HISTORY:\n${historyContext}\n\n` : ''
 }User: ${userMessage}
 
-Respond as the style assistant. Remember to include [ID:X] when referencing specific wardrobe items. Use markdown formatting for better readability.`;
+Respond as the style assistant. Remember to include [ID:X] when referencing specific wardrobe items. Use **markdown formatting** for better readability.`;
 
 	const textResponse = await generateText(fullPrompt);
 

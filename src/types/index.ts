@@ -207,3 +207,100 @@ export interface AssessmentResponses {
 	/** When assessment was completed */
 	completedAt: string;
 }
+
+/**
+ * Store preference status for recommendations
+ */
+export type StorePreference = 'preferred' | 'avoided' | 'neutral';
+
+/**
+ * A retailer/store with user preference
+ */
+export interface StoreInfo {
+	/** Store name */
+	name: string;
+	/** Whether this store was auto-detected from order history */
+	isFromHistory: boolean;
+	/** User's preference for this store */
+	preference: StorePreference;
+}
+
+/**
+ * Price limit for a specific clothing type
+ */
+export interface PriceLimit {
+	clothingType: ClothingType;
+	maxPrice: number;
+}
+
+/**
+ * User's shopping preferences for recommendations
+ */
+export interface RecommendationPreferences {
+	stores: StoreInfo[];
+	priceLimits: PriceLimit[];
+	lastUpdated: string;
+}
+
+/**
+ * Status of a piece suggestion
+ */
+export type SuggestionStatus = 'pending' | 'approved' | 'rejected' | 'refined';
+
+/**
+ * A piece type suggestion from the AI
+ */
+export interface PieceSuggestion {
+	id: string;
+	/** Description like "Burgundy short jacket" */
+	description: string;
+	/** Why this piece is recommended */
+	rationale: string;
+	/** IDs of compatible existing wardrobe pieces */
+	compatiblePieceIds: ClothesId[];
+	/** User's approval status */
+	status: SuggestionStatus;
+	/** User's refinement text if they edited */
+	refinedDescription?: string;
+}
+
+/**
+ * A product found via Google Search
+ */
+export interface ProductResult {
+	id: string;
+	name: string;
+	retailer: string;
+	price: number | null;
+	currency: string;
+	url: string;
+	imageUrl: string | null;
+	/** Whether retailer is in user's preferred stores */
+	isPreferredStore: boolean;
+}
+
+/**
+ * Search results for an approved suggestion
+ */
+export interface ProductSearchResults {
+	suggestionId: string;
+	products: ProductResult[];
+	searchedAt: string;
+	status: 'loading' | 'complete' | 'error';
+	error?: string;
+}
+
+/**
+ * Current step in the recommendation flow
+ */
+export type RecommendationStep = 'suggestions' | 'search';
+
+/**
+ * State of the recommendation session
+ */
+export interface RecommendationSession {
+	step: RecommendationStep;
+	suggestions: PieceSuggestion[];
+	searchResults: ProductSearchResults[];
+	createdAt: string;
+}
