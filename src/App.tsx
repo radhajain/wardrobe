@@ -3,6 +3,7 @@ import { Layout } from './components/layout/Layout';
 import { PiecesPage } from './pages/PiecesPage';
 import { OutfitsPage } from './pages/OutfitsPage';
 import { BuilderPage } from './pages/BuilderPage';
+import { StylistPage } from './pages/StylistPage';
 import './App.css';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
 					<Route path="/outfits" element={<OutfitsPage />} />
 					<Route path="/builder" element={<BuilderPage />} />
 					<Route path="/builder/:id" element={<BuilderPage />} />
+					<Route path="/stylist" element={<StylistPage />} />
 				</Routes>
 			</Layout>
 		</BrowserRouter>

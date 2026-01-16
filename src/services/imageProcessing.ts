@@ -1,5 +1,5 @@
-const GEMINI_API_URL =
-	'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+import { generateWithImage } from './gemini';
+import { ImageBoundsSchema } from './schemas';
 
 /**
  * Converts an image URL to a base64 data URL
@@ -162,31 +162,18 @@ function removeBackgroundSimple(imageData: string): Promise<string> {
  * Removes background from an image using Gemini to identify the product bounds
  */
 export async function removeBackground(imageUrl: string): Promise<string> {
-	const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-
 	// First, get the image as base64
 	const imageBase64 = await imageUrlToBase64(imageUrl);
 	const base64Data = imageBase64.split(',')[1];
 	const mimeType = imageBase64.split(';')[0].split(':')[1];
 
-	if (!apiKey) {
+	if (!process.env.REACT_APP_GEMINI_API_KEY) {
 		// Fall back to simple background removal without API
 		return removeBackgroundSimple(imageBase64);
 	}
 
 	try {
-		// Use Gemini to identify the product bounding box
-		const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify({
-				contents: [
-					{
-						parts: [
-							{
-								text: `Analyze this product image and identify the main clothing/fashion item.
+		const prompt = `Analyze this product image and identify the main clothing/fashion item.
 Return ONLY a JSON object with the bounding box of the main product as percentages of the image dimensions:
 {
   "x": <left edge as percentage 0-100>,
@@ -195,43 +182,14 @@ Return ONLY a JSON object with the bounding box of the main product as percentag
   "height": <height as percentage 0-100>
 }
 
-The bounding box should tightly wrap around the main product, excluding any background, mannequin, or model.
-Return ONLY the JSON, no other text.`,
-							},
-							{
-								inlineData: {
-									mimeType: mimeType,
-									data: base64Data,
-								},
-							},
-						],
-					},
-				],
-				generationConfig: {
-					temperature: 0.1,
-					maxOutputTokens: 256,
-				},
-			}),
-		});
+The bounding box should tightly wrap around the main product, excluding any background, mannequin, or model.`;
 
-		if (!response.ok) {
-			throw new Error('Gemini API request failed');
-		}
-
-		const data = await response.json();
-		const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-		if (!textResponse) {
-			throw new Error('No response from Gemini');
-		}
-
-		// Parse the bounding box
-		const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-		if (!jsonMatch) {
-			throw new Error('No JSON found in response');
-		}
-
-		const bounds = JSON.parse(jsonMatch[0]);
+		const bounds = await generateWithImage(
+			prompt,
+			base64Data,
+			mimeType,
+			ImageBoundsSchema
+		);
 
 		// Apply the mask to remove background
 		return applyMaskToImage(imageBase64, bounds);

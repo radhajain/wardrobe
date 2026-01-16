@@ -1,19 +1,148 @@
-import { Clothes, ClothingType } from '../types';
+import { GoogleGenAI } from '@google/genai';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z } from 'zod';
+import { Clothes, ClothingType, ClothingTypes } from '../types';
+import { ProductDetailsSchema } from './schemas';
+import { getValues } from '../utilities/enum';
 
-const GEMINI_API_URL =
-	'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const MODEL = 'gemini-2.5-flash';
 
-interface GeminiResponse {
-	candidates?: Array<{
-		content: {
-			parts: Array<{
-				text: string;
-			}>;
-		};
-	}>;
-	error?: {
-		message: string;
-	};
+let client: GoogleGenAI | null = null;
+
+/**
+ * Get or create the Gemini client singleton
+ */
+function getClient(): GoogleGenAI {
+	if (!client) {
+		const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+		if (!apiKey) {
+			throw new Error(
+				'Gemini API key not found. Please set REACT_APP_GEMINI_API_KEY in your .env file.'
+			);
+		}
+		client = new GoogleGenAI({ apiKey });
+	}
+	return client;
+}
+
+/**
+ * Generate structured JSON output with Zod schema validation
+ */
+export async function generateStructured<T>(
+	prompt: string,
+	schema: z.ZodSchema<T>,
+	options?: { temperature?: number }
+): Promise<T> {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const jsonSchema = zodToJsonSchema(schema as any) as object;
+	const response = await getClient().models.generateContent({
+		model: MODEL,
+		contents: prompt,
+		config: {
+			responseMimeType: 'application/json',
+			responseSchema: jsonSchema,
+			temperature: options?.temperature ?? 0.7,
+		},
+	});
+	const text = response.text;
+	if (!text) {
+		throw new Error('No response from Gemini');
+	}
+	return schema.parse(JSON.parse(text));
+}
+
+/**
+ * Generate plain text output
+ */
+export async function generateText(
+	prompt: string,
+	options?: { temperature?: number; maxTokens?: number }
+): Promise<string> {
+	const response = await getClient().models.generateContent({
+		model: MODEL,
+		contents: prompt,
+		config: {
+			temperature: options?.temperature ?? 0.7,
+			maxOutputTokens: options?.maxTokens ?? 2048,
+		},
+	});
+	const text = response.text;
+	if (!text) {
+		throw new Error('No response from Gemini');
+	}
+	return text;
+}
+
+/**
+ * Generate streaming text output
+ */
+export async function* generateStream(
+	prompt: string,
+	options?: { temperature?: number }
+): AsyncGenerator<string> {
+	const response = await getClient().models.generateContentStream({
+		model: MODEL,
+		contents: prompt,
+		config: {
+			temperature: options?.temperature ?? 0.7,
+		},
+	});
+	for await (const chunk of response) {
+		if (chunk.text) {
+			yield chunk.text;
+		}
+	}
+}
+
+/**
+ * Generate content with image input (multimodal)
+ */
+export async function generateWithImage<T>(
+	prompt: string,
+	imageBase64: string,
+	mimeType: string,
+	schema?: z.ZodSchema<T>
+): Promise<T extends undefined ? string : T> {
+	const config: {
+		temperature: number;
+		responseMimeType?: string;
+		responseSchema?: object;
+	} = { temperature: 0.1 };
+
+	if (schema) {
+		config.responseMimeType = 'application/json';
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		config.responseSchema = zodToJsonSchema(schema as any) as object;
+	}
+
+	const response = await getClient().models.generateContent({
+		model: MODEL,
+		contents: [
+			{
+				role: 'user',
+				parts: [
+					{ text: prompt },
+					{
+						inlineData: {
+							mimeType: mimeType,
+							data: imageBase64,
+						},
+					},
+				],
+			},
+		],
+		config,
+	});
+
+	const text = response.text;
+	if (!text) {
+		throw new Error('No response from Gemini');
+	}
+
+	if (schema) {
+		return schema.parse(JSON.parse(text)) as T extends undefined ? string : T;
+	}
+	return text as T extends undefined ? string : T;
 }
 
 /**
@@ -36,14 +165,6 @@ async function fetchProductPage(url: string): Promise<string> {
 export async function extractProductDetails(
 	productUrl: string
 ): Promise<Partial<Clothes>> {
-	const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-
-	if (!apiKey) {
-		throw new Error(
-			'Gemini API key not found. Please set REACT_APP_GEMINI_API_KEY in your .env file.'
-		);
-	}
-
 	// First, fetch the product page HTML
 	let pageContent: string;
 	try {
@@ -75,88 +196,25 @@ Extract the following information and return it as a JSON object:
 Important:
 - For "type", choose the most appropriate category from the list
 - For "imageUrl", find the best quality product image URL from the page
-- If you can't determine a field, use an empty string
-- Return ONLY the JSON object, no additional text`;
+- If you can't determine a field, use an empty string`;
 
-	const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify({
-			contents: [
-				{
-					parts: [
-						{
-							text: prompt,
-						},
-					],
-				},
-			],
-			generationConfig: {
-				temperature: 0.1,
-				maxOutputTokens: 1024,
-			},
-		}),
+	const result = await generateStructured(prompt, ProductDetailsSchema, {
+		temperature: 0.1,
 	});
 
-	if (!response.ok) {
-		const error = await response.json();
-		throw new Error(error.error?.message || 'Failed to call Gemini API');
-	}
+	const normalizedType = getValues(ClothingTypes).includes(
+		result.type?.toLowerCase() as ClothingType
+	)
+		? (result.type.toLowerCase() as ClothingType)
+		: 'other';
 
-	const data: GeminiResponse = await response.json();
-
-	if (data.error) {
-		throw new Error(data.error.message);
-	}
-
-	const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-	if (!textResponse) {
-		throw new Error('No response from Gemini');
-	}
-
-	// Parse the JSON response
-	try {
-		// Extract JSON from the response (in case there's extra text)
-		const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-		if (!jsonMatch) {
-			throw new Error('No JSON found in response');
-		}
-
-		const parsed = JSON.parse(jsonMatch[0]);
-
-		// Validate and normalize the type field
-		const validTypes: ClothingType[] = [
-			'coat',
-			'jacket',
-			'denim',
-			'dress',
-			'skirt',
-			'top',
-			'pants',
-			'knitwear',
-			'shoes',
-			'bag',
-			'accessory',
-			'other',
-		];
-
-		const normalizedType = validTypes.includes(parsed.type?.toLowerCase())
-			? (parsed.type.toLowerCase() as ClothingType)
-			: 'other';
-
-		return {
-			name: parsed.name || '',
-			type: normalizedType,
-			color: parsed.color || '',
-			style: parsed.style || '',
-			designer: parsed.designer || '',
-			imageUrl: parsed.imageUrl || '',
-			productUrl: productUrl,
-		};
-	} catch {
-		throw new Error('Failed to parse Gemini response');
-	}
+	return {
+		name: result.name,
+		type: normalizedType,
+		color: result.color,
+		style: result.style,
+		designer: result.designer,
+		imageUrl: result.imageUrl,
+		productUrl: productUrl,
+	};
 }

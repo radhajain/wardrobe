@@ -1,4 +1,5 @@
 .draggable-piece {
+	position: relative;
 	cursor: grab;
 	transition: opacity var(--transition-fast);
 }
@@ -9,6 +10,24 @@
 
 .draggable-piece--dragging {
 	opacity: 0.5;
+}
+
+.draggable-piece--suggested {
+	outline: 2px solid var(--color-text-primary);
+	outline-offset: 2px;
+}
+
+.draggable-piece__tag {
+	position: absolute;
+	top: var(--spacing-xs);
+	left: var(--spacing-xs);
+	z-index: 1;
+	padding: 2px var(--spacing-xs);
+	background-color: var(--color-text-primary);
+	color: var(--color-surface);
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: var(--letter-spacing-wide);
 }
 
 .draggable-piece__image-container {

@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { v4 as uuidv4 } from 'uuid';
 import { WardrobePanel } from '../components/builder/WardrobePanel';
 import { OutfitCanvas } from '../components/builder/OutfitCanvas';
+import { SuggestPanel } from '../components/builder/SuggestPanel';
 import { useWardrobe } from '../hooks/useWardrobe';
 import { useOutfits } from '../hooks/useOutfits';
-import { OutfitItem, Outfit } from '../types';
+import { getOutfitSuggestions } from '../services/styleAssistant';
+import { OutfitItem, Outfit, OutfitSuggestion, ClothesId } from '../types';
 import './BuilderPage.css';
 
 export const BuilderPage = () => {
@@ -19,6 +21,11 @@ export const BuilderPage = () => {
 	const [outfitName, setOutfitName] = useState('');
 	const [canvasItems, setCanvasItems] = useState<OutfitItem[]>([]);
 	const [isEditing, setIsEditing] = useState(false);
+
+	// Suggestion state
+	const [suggestion, setSuggestion] = useState<OutfitSuggestion | null>(null);
+	const [suggestionLoading, setSuggestionLoading] = useState(false);
+	const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (id) {
@@ -61,6 +68,48 @@ export const BuilderPage = () => {
 	const handleClear = () => {
 		setCanvasItems([]);
 		setOutfitName('');
+		clearSuggestions();
+	};
+
+	const handleSuggest = useCallback(async () => {
+		if (suggestionLoading) return;
+
+		setSuggestionLoading(true);
+		setSuggestionError(null);
+
+		try {
+			const currentItemIds = canvasItems.map((item) => item.clothesId);
+			const result = await getOutfitSuggestions(items, currentItemIds);
+			setSuggestion(result);
+		} catch (err) {
+			const errorMessage =
+				err instanceof Error ? err.message : 'Failed to get suggestions';
+			setSuggestionError(errorMessage);
+		} finally {
+			setSuggestionLoading(false);
+		}
+	}, [canvasItems, items, suggestionLoading]);
+
+	const clearSuggestions = () => {
+		setSuggestion(null);
+		setSuggestionError(null);
+	};
+
+	const handleAddAllSuggestions = (ids: ClothesId[]) => {
+		// Add all suggested items to the canvas with staggered positions
+		const newItems: OutfitItem[] = ids.map((clothesId, index) => ({
+			id: uuidv4(),
+			clothesId,
+			position: {
+				x: 50 + (index % 3) * 160,
+				y: 50 + Math.floor(index / 3) * 220,
+				width: 150,
+				height: 200,
+				zIndex: canvasItems.length + index + 1,
+			},
+		}));
+		setCanvasItems((prev) => [...prev, ...newItems]);
+		clearSuggestions();
 	};
 
 	const handleSave = async () => {
@@ -85,7 +134,20 @@ export const BuilderPage = () => {
 		<DndProvider backend={HTML5Backend}>
 			<div className="builder-page">
 				<div className="builder-page__content">
-					<WardrobePanel items={items} />
+					<div className="builder-page__sidebar">
+						<SuggestPanel
+							suggestion={suggestion}
+							wardrobe={items}
+							isLoading={suggestionLoading}
+							error={suggestionError}
+							onClear={clearSuggestions}
+							onAddAll={handleAddAllSuggestions}
+						/>
+						<WardrobePanel
+							items={items}
+							suggestedIds={suggestion?.suggestedItemIds}
+						/>
+					</div>
 					<OutfitCanvas
 						items={canvasItems}
 						wardrobeItems={items}
@@ -103,6 +165,13 @@ export const BuilderPage = () => {
 						onChange={(e) => setOutfitName(e.target.value)}
 					/>
 					<div className="builder-page__actions">
+						<button
+							className="builder-page__btn builder-page__btn--suggest"
+							onClick={handleSuggest}
+							disabled={suggestionLoading}
+						>
+							{suggestionLoading ? 'Suggesting...' : 'Suggest'}
+						</button>
 						<button
 							className="builder-page__btn builder-page__btn--secondary"
 							onClick={handleClear}
