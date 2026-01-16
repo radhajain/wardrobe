@@ -30,6 +30,7 @@ export function RecommendedPage() {
 		updateSuggestionStatus,
 		refineSuggestion,
 		searchForProducts,
+		searchDirect,
 		resetSession,
 	} = useRecommendations(wardrobe, preferences);
 
@@ -63,6 +64,7 @@ export function RecommendedPage() {
 						onUpdateSuggestionStatus={updateSuggestionStatus}
 						onRefineSuggestion={refineSuggestion}
 						onSearchProducts={searchForProducts}
+						onSearchDirect={searchDirect}
 						onReset={resetSession}
 					/>
 				</main>

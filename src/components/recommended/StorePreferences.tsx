@@ -22,7 +22,10 @@ export function StorePreferences({
 
 	const handleAddStore = () => {
 		const trimmed = newStoreName.trim();
-		if (trimmed && !stores.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())) {
+		if (
+			trimmed &&
+			!stores.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())
+		) {
 			onAddStore(trimmed);
 			setNewStoreName('');
 		}
@@ -126,14 +129,7 @@ interface StoreItemProps {
 function StoreItem({ store, onUpdatePreference, onRemove }: StoreItemProps) {
 	return (
 		<li className="store-item">
-			<span className="store-item__name">
-				{store.name}
-				{store.isFromHistory && (
-					<span className="store-item__badge" title="From your purchase history">
-						Auto
-					</span>
-				)}
-			</span>
+			<span className="store-item__name">{store.name}</span>
 			<div className="store-item__actions">
 				<select
 					className="store-item__select"

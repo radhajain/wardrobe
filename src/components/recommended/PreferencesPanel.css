@@ -6,7 +6,9 @@
 	background: var(--color-background);
 	border-right: 1px solid var(--color-border);
 	height: 100%;
+	min-height: 0;
 	overflow-y: auto;
+	overscroll-behavior: contain;
 }
 
 .preferences-panel__header {

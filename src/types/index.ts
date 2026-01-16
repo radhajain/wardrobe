@@ -296,11 +296,27 @@ export interface ProductSearchResults {
 export type RecommendationStep = 'suggestions' | 'search';
 
 /**
+ * Mode of the recommendation panel
+ */
+export type RecommendationMode = 'suggestions' | 'direct-search';
+
+/**
+ * Direct search query and results
+ */
+export interface DirectSearch {
+	query: string;
+	results: ProductSearchResults;
+}
+
+/**
  * State of the recommendation session
  */
 export interface RecommendationSession {
 	step: RecommendationStep;
+	mode: RecommendationMode;
 	suggestions: PieceSuggestion[];
 	searchResults: ProductSearchResults[];
+	/** Direct item search state */
+	directSearch?: DirectSearch;
 	createdAt: string;
 }

@@ -169,3 +169,82 @@ Focus on finding real, currently available products from legitimate retailers. P
 		),
 	}));
 }
+
+/**
+ * Direct search for a specific item type (user-entered query)
+ */
+export async function searchDirectItem(
+	query: string,
+	preferences: RecommendationPreferences,
+	signal?: AbortSignal
+): Promise<ProductResult[]> {
+	const preferredStores = preferences.stores
+		.filter((s) => s.preference === 'preferred')
+		.map((s) => s.name);
+	const avoidedStores = preferences.stores
+		.filter((s) => s.preference === 'avoided')
+		.map((s) => s.name);
+
+	// Try to find a relevant price limit based on clothing type keywords
+	const queryLower = query.toLowerCase();
+	const matchedType = getValues(ClothingTypes).find((type) =>
+		queryLower.includes(type)
+	);
+	const priceLimit = preferences.priceLimits.find(
+		(p) => p.clothingType === matchedType
+	);
+
+	const systemInstruction = `You are an expert personal shopper skilled at finding clothing products online that match specific style descriptions.`;
+
+	const prompt = `TASK: Search for products matching this description: "${query}". You MUST use the google search tool to find real products currently for sale online.
+	After you have found a product, use the URL Context tool to verify that the item is still available at the given link.
+
+	${priceLimit ? `PRICE LIMIT: Under $${priceLimit.maxPrice}` : ''}
+
+${
+	preferredStores.length > 0
+		? `PRIORITIZE these stores (search them first): ${preferredStores.join(
+				', '
+		  )}`
+		: ''
+}
+${
+	avoidedStores.length > 0
+		? `AVOID these stores: ${avoidedStores.join(', ')}`
+		: ''
+}
+
+Return an array of 3-10 actual products currently for sale online that match this description. For each product, provide:
+- name: Full product name
+- retailer: Store or brand name
+- price: Price as a number (null if unavailable)
+- currency: Currency code (default USD) as a string
+- url: Direct link to the product page
+- imageUrl: Product image URL (null if unavailable)
+
+Focus on finding real, currently available products from legitimate retailers. Prioritize the preferred stores if specified.`;
+
+	const result = await generateStructured({
+		systemInstruction,
+		prompt,
+		schema: ProductSearchResultsSchema,
+		options: {
+			temperature: 0.1,
+			tools: [{ googleSearch: {}, urlContext: {} }],
+		},
+		signal,
+	});
+
+	return result.map((p, i) => ({
+		id: `product-${Date.now()}-${i}`,
+		name: p.name,
+		retailer: p.retailer,
+		price: p.price,
+		currency: p.currency,
+		url: p.url,
+		imageUrl: p.imageUrl,
+		isPreferredStore: preferredStores.some((store) =>
+			p.retailer.toLowerCase().includes(store.toLowerCase())
+		),
+	}));
+}

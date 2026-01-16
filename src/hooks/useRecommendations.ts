@@ -10,6 +10,7 @@ import { recommendationStorage } from '../services/recommendationStorage';
 import {
 	generatePieceSuggestions,
 	searchProducts,
+	searchDirectItem,
 } from '../services/recommendationService';
 
 interface UseRecommendationsReturn {
@@ -24,6 +25,8 @@ interface UseRecommendationsReturn {
 	refineSuggestion: (id: string, newDescription: string) => void;
 	/** Step 2: Search for products for approved suggestions */
 	searchForProducts: (suggestionId: string) => Promise<void>;
+	/** Direct search for a specific item */
+	searchDirect: (query: string) => Promise<void>;
 	/** Reset the session */
 	resetSession: () => void;
 }
@@ -53,6 +56,7 @@ export function useRecommendations(
 
 			const newSession: RecommendationSession = {
 				step: 'suggestions',
+				mode: 'suggestions',
 				suggestions,
 				searchResults: [],
 				createdAt: new Date().toISOString(),
@@ -181,6 +185,85 @@ export function useRecommendations(
 		[session, preferences]
 	);
 
+	const searchDirect = useCallback(
+		async (query: string) => {
+			if (!preferences) {
+				setError('Please set your preferences first');
+				return;
+			}
+
+			if (!query.trim()) {
+				setError('Please enter a search query');
+				return;
+			}
+
+			setIsLoading(true);
+			setError(null);
+
+			// Create session with loading state
+			const loadingSession: RecommendationSession = {
+				step: 'search',
+				mode: 'direct-search',
+				suggestions: [],
+				searchResults: [],
+				directSearch: {
+					query: query.trim(),
+					results: {
+						suggestionId: 'direct-search',
+						products: [],
+						searchedAt: new Date().toISOString(),
+						status: 'loading',
+					},
+				},
+				createdAt: new Date().toISOString(),
+			};
+			setSession(loadingSession);
+
+			try {
+				const products = await searchDirectItem(query.trim(), preferences);
+
+				const completeSession: RecommendationSession = {
+					...loadingSession,
+					directSearch: {
+						query: query.trim(),
+						results: {
+							suggestionId: 'direct-search',
+							products,
+							searchedAt: new Date().toISOString(),
+							status: 'complete',
+						},
+					},
+				};
+
+				recommendationStorage.saveSession(completeSession);
+				setSession(completeSession);
+			} catch (err) {
+				const errorSession: RecommendationSession = {
+					...loadingSession,
+					directSearch: {
+						query: query.trim(),
+						results: {
+							suggestionId: 'direct-search',
+							products: [],
+							searchedAt: new Date().toISOString(),
+							status: 'error',
+							error:
+								err instanceof Error
+									? err.message
+									: 'Failed to search for products',
+						},
+					},
+				};
+
+				recommendationStorage.saveSession(errorSession);
+				setSession(errorSession);
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[preferences]
+	);
+
 	const resetSession = useCallback(() => {
 		recommendationStorage.clearSession();
 		setSession(null);
@@ -195,6 +278,7 @@ export function useRecommendations(
 		updateSuggestionStatus,
 		refineSuggestion,
 		searchForProducts,
+		searchDirect,
 		resetSession,
 	};
 }
