@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Clothes, ClothingType } from '../../types';
-import { extractProductDetails } from '../../services/gemini';
 import './AddPieceModal.css';
+import { extractProductDetails } from '../../services/extractProductDetails';
 
 interface AddPieceModalProps {
 	onClose: () => void;

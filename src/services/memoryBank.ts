@@ -87,9 +87,7 @@ export async function recordQuery(
 async function generateReflections(
 	queries: MemoryBank['queries']
 ): Promise<UserReflections> {
-	const queriesText = queries
-		.map((q) => `[${q.source}] ${q.query}`)
-		.join('\n');
+	const queriesText = queries.map((q) => `[${q.source}] ${q.query}`).join('\n');
 
 	const prompt = `Analyze these user queries about their wardrobe and style to create reflections about them.
 
@@ -105,7 +103,10 @@ Based on these queries, provide reflections in this exact JSON format:
 
 Be insightful and read between the lines. Keep each section to 2-3 sentences.`;
 
-	const result = await generateStructured(prompt, UserReflectionsSchema);
+	const result = await generateStructured({
+		prompt: prompt,
+		schema: UserReflectionsSchema,
+	});
 
 	return {
 		purposeAndContext: result.purposeAndContext || '',

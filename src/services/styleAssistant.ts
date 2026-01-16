@@ -39,14 +39,18 @@ export function buildWardrobeContext(items: ClothesWithId[]): string {
 		context += `${type} (${typeItems.length}):\n`;
 		for (const item of typeItems) {
 			const details = [item.color, item.style].filter(Boolean).join(', ');
-			context += `- [ID:${item.id}] ${item.name} by ${item.designer}${details ? ` - ${details}` : ''}\n`;
+			context += `- [ID:${item.id}] ${item.name} by ${item.designer}${
+				details ? ` - ${details}` : ''
+			}\n`;
 		}
 		context += '\n';
 	}
 
 	// Add summary insights
 	const colors = Array.from(new Set(items.map((i) => i.color).filter(Boolean)));
-	const designers = Array.from(new Set(items.map((i) => i.designer).filter(Boolean)));
+	const designers = Array.from(
+		new Set(items.map((i) => i.designer).filter(Boolean))
+	);
 
 	context += `COLOR PALETTE: ${colors.join(', ') || 'Various'}\n`;
 	context += `BRANDS: ${designers.join(', ') || 'Various'}\n`;
@@ -157,7 +161,9 @@ export async function sendStyleChat(
 
 	const fullPrompt = `${systemPrompt}
 
-${historyContext ? `CONVERSATION HISTORY:\n${historyContext}\n\n` : ''}User: ${userMessage}
+${
+	historyContext ? `CONVERSATION HISTORY:\n${historyContext}\n\n` : ''
+}User: ${userMessage}
 
 Respond as the style assistant. Remember to include [ID:X] when referencing specific wardrobe items. Use markdown formatting for better readability.`;
 
@@ -182,7 +188,9 @@ export async function getOutfitSuggestions(
 	currentItemIds: ClothesId[]
 ): Promise<OutfitSuggestion> {
 	// Record this as a query for memory bank
-	recordQuery('Requesting outfit suggestions in builder', 'builder').catch(console.error);
+	recordQuery('Requesting outfit suggestions in builder', 'builder').catch(
+		console.error
+	);
 
 	const wardrobeContext = buildWardrobeContext(wardrobe);
 	const userContext = buildUserContext();
@@ -212,7 +220,10 @@ Respond with:
 
 Only include item IDs that exist in the wardrobe. Suggest 2-5 items that would work well together.`;
 
-	const result = await generateStructured(prompt, OutfitSuggestionSchema);
+	const result = await generateStructured({
+		prompt,
+		schema: OutfitSuggestionSchema,
+	});
 
 	// Validate suggested IDs exist in wardrobe
 	const validIds = result.suggestedItemIds.filter((id) =>
@@ -220,7 +231,8 @@ Only include item IDs that exist in the wardrobe. Suggest 2-5 items that would w
 	);
 
 	return {
-		explanation: result.explanation || 'Here are some suggestions for your outfit.',
+		explanation:
+			result.explanation || 'Here are some suggestions for your outfit.',
 		suggestedItemIds: validIds,
 	};
 }
