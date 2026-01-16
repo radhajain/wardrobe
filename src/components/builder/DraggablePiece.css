@@ -1,0 +1,45 @@
+.draggable-piece {
+	cursor: grab;
+	transition: opacity var(--transition-fast);
+}
+
+.draggable-piece:active {
+	cursor: grabbing;
+}
+
+.draggable-piece--dragging {
+	opacity: 0.5;
+}
+
+.draggable-piece__image-container {
+	aspect-ratio: 3 / 4;
+	overflow: hidden;
+	background-color: var(--color-background);
+	margin-bottom: var(--spacing-xs);
+}
+
+.draggable-piece__image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	pointer-events: none;
+}
+
+.draggable-piece__placeholder {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--color-text-muted);
+	font-size: var(--font-size-xs);
+	text-transform: capitalize;
+}
+
+.draggable-piece__name {
+	font-size: var(--font-size-xs);
+	color: var(--color-text-secondary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}

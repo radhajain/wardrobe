@@ -1,0 +1,112 @@
+.canvas-item {
+	position: absolute;
+	cursor: move;
+	user-select: none;
+	border: 1px solid transparent;
+	transition: border-color var(--transition-fast);
+}
+
+.canvas-item:hover {
+	border-color: var(--color-border);
+}
+
+.canvas-item--dragging,
+.canvas-item--resizing {
+	border-color: var(--color-text-primary);
+}
+
+.canvas-item__image {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	pointer-events: none;
+}
+
+.canvas-item__placeholder {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: var(--color-background-alt);
+	color: var(--color-text-muted);
+	font-size: var(--font-size-sm);
+	text-transform: capitalize;
+}
+
+/* Controls container */
+.canvas-item__controls {
+	position: absolute;
+	top: -10px;
+	right: -10px;
+	display: flex;
+	gap: 4px;
+	opacity: 0;
+	transition: opacity var(--transition-fast);
+}
+
+.canvas-item:hover .canvas-item__controls {
+	opacity: 1;
+}
+
+.canvas-item__btn {
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background-color: var(--color-text-primary);
+	color: var(--color-surface);
+	font-size: 14px;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: background-color var(--transition-fast);
+}
+
+.canvas-item__btn--edit:hover {
+	background-color: #0066cc;
+}
+
+.canvas-item__btn--delete:hover {
+	background-color: #c00;
+}
+
+/* Resize handles */
+.canvas-item__handle {
+	position: absolute;
+	width: 10px;
+	height: 10px;
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-text-primary);
+	opacity: 0;
+	transition: opacity var(--transition-fast);
+}
+
+.canvas-item:hover .canvas-item__handle {
+	opacity: 1;
+}
+
+.canvas-item__handle--nw {
+	top: -5px;
+	left: -5px;
+	cursor: nw-resize;
+}
+
+.canvas-item__handle--ne {
+	top: -5px;
+	right: -5px;
+	cursor: ne-resize;
+}
+
+.canvas-item__handle--sw {
+	bottom: -5px;
+	left: -5px;
+	cursor: sw-resize;
+}
+
+.canvas-item__handle--se {
+	bottom: -5px;
+	right: -5px;
+	cursor: se-resize;
+}

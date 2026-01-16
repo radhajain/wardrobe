@@ -1,0 +1,21 @@
+.outfit-canvas {
+	flex: 1;
+	position: relative;
+	background-color: var(--color-background);
+	overflow: hidden;
+	min-height: 500px;
+}
+
+.outfit-canvas--over {
+	background-color: var(--color-background-alt);
+}
+
+.outfit-canvas__empty {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	text-align: center;
+	color: var(--color-text-muted);
+	font-size: var(--font-size-sm);
+}

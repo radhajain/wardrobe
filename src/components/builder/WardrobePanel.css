@@ -1,0 +1,24 @@
+.wardrobe-panel {
+	width: var(--sidebar-width);
+	height: 100%;
+	overflow-y: auto;
+	background-color: var(--color-surface);
+	border-right: 1px solid var(--color-border-subtle);
+	padding: var(--spacing-md);
+	flex-shrink: 0;
+	width: 50%;
+}
+
+.wardrobe-panel__title {
+	font-size: var(--font-size-sm);
+	font-weight: var(--font-weight-medium);
+	letter-spacing: 0.02em;
+	margin-bottom: var(--spacing-md);
+	color: var(--color-text-secondary);
+}
+
+.wardrobe-panel__grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: var(--spacing-md);
+}
