@@ -1,17 +1,58 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { PiecesGrid } from '../components/pieces/PiecesGrid';
+import { PieceDetail } from '../components/pieces/PieceDetail';
 import { AddPieceModal } from '../components/pieces/AddPieceModal';
 import { useWardrobe } from '../hooks/useWardrobe';
-import { Clothes } from '../types';
+import { useOutfits } from '../hooks/useOutfits';
+import { Clothes, ClothesId } from '../types';
 import './PiecesPage.css';
 
 export const PiecesPage = () => {
-	const { items, loading, addItem } = useWardrobe();
+	const { pieceId } = useParams<{ pieceId?: string }>();
+	const navigate = useNavigate();
+	const { items, loading, addItem, updateItem } = useWardrobe();
+	const { outfits } = useOutfits();
 	const [showAddModal, setShowAddModal] = useState(false);
+
+	// Parse pieceId from URL
+	const selectedPieceId = pieceId ? parseInt(pieceId, 10) : null;
+
+	// Get the selected piece
+	const selectedPiece = useMemo(() => {
+		if (selectedPieceId === null) return null;
+		return items.find((item) => item.id === selectedPieceId) || null;
+	}, [items, selectedPieceId]);
+
+	// Get outfits that use the selected piece
+	const outfitsUsingPiece = useMemo(() => {
+		if (selectedPieceId === null) return [];
+		return outfits.filter((outfit) =>
+			outfit.items.some((item) => item.clothesId === selectedPieceId)
+		);
+	}, [outfits, selectedPieceId]);
+
+	// Handle piece selection
+	const handlePieceClick = (id: ClothesId) => {
+		if (selectedPieceId === id) {
+			// Deselect if clicking the same piece
+			navigate('/pieces');
+		} else {
+			navigate(`/pieces/${id}`);
+		}
+	};
+
+	const handleCloseDetail = () => {
+		navigate('/pieces');
+	};
 
 	const handleAddPiece = async (piece: Clothes) => {
 		await addItem(piece);
 		setShowAddModal(false);
+	};
+
+	const handleUpdatePiece = async (id: number, updates: Partial<Clothes>) => {
+		await updateItem(id, updates);
 	};
 
 	if (loading) {
@@ -36,7 +77,23 @@ export const PiecesPage = () => {
 					+ Add Piece
 				</button>
 			</div>
-			<PiecesGrid items={items} />
+
+			<PiecesGrid
+				items={items}
+				selectedId={selectedPieceId}
+				onPieceClick={handlePieceClick}
+				detailPanel={
+					selectedPiece ? (
+						<PieceDetail
+							piece={selectedPiece}
+							outfitsUsingPiece={outfitsUsingPiece}
+							wardrobeItems={items}
+							onUpdate={handleUpdatePiece}
+							onClose={handleCloseDetail}
+						/>
+					) : undefined
+				}
+			/>
 
 			{showAddModal && (
 				<AddPieceModal

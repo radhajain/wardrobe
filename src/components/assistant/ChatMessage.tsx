@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import Markdown from 'react-markdown';
 import { ChatMessage as ChatMessageType, ClothesWithId } from '../../types';
 import './ChatMessage.css';
@@ -5,13 +6,21 @@ import './ChatMessage.css';
 interface ChatMessageProps {
 	message: ChatMessageType;
 	wardrobe: ClothesWithId[];
+	onRedo?: (messageId: string) => void;
+	isLoading?: boolean;
 }
 
 /**
  * Renders a single chat message with optional item references
  */
-export function ChatMessage({ message, wardrobe }: ChatMessageProps) {
+export function ChatMessage({ message, wardrobe, onRedo, isLoading }: ChatMessageProps) {
+	const navigate = useNavigate();
 	const isUser = message.role === 'user';
+	const isAssistant = message.role === 'assistant';
+
+	const handleItemClick = (itemId: number) => {
+		navigate(`/pieces/${itemId}`);
+	};
 
 	// Get referenced items from wardrobe
 	const referencedItems = message.itemReferences
@@ -39,7 +48,11 @@ export function ChatMessage({ message, wardrobe }: ChatMessageProps) {
 						<span className="chat-message__items-label">Referenced pieces:</span>
 						<div className="chat-message__items-grid">
 							{referencedItems.map((item) => (
-								<div key={item.id} className="chat-message__item">
+								<button
+									key={item.id}
+									className="chat-message__item"
+									onClick={() => handleItemClick(item.id)}
+								>
 									{item.imageUrl && (
 										<img
 											src={item.imageUrl}
@@ -48,9 +61,22 @@ export function ChatMessage({ message, wardrobe }: ChatMessageProps) {
 										/>
 									)}
 									<span className="chat-message__item-name">{item.name}</span>
-								</div>
+								</button>
 							))}
 						</div>
+					</div>
+				)}
+
+				{isAssistant && onRedo && (
+					<div className="chat-message__actions">
+						<button
+							className="chat-message__redo-btn"
+							onClick={() => onRedo(message.id)}
+							disabled={isLoading}
+							title="Regenerate response"
+						>
+							Redo
+						</button>
 					</div>
 				)}
 			</div>

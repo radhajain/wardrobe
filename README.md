@@ -1,46 +1,32 @@
-# Getting Started with Create React App
+# Wardrobe
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A personal wardrobe management app for cataloging your clothes and creating outfits.
 
-## Available Scripts
+## What it does
 
-In the project directory, you can run:
+**Pieces** - Keep track of everything in your wardrobe. Add items by pasting a product URL (the app will try to pull in details automatically) or enter them manually. Click any piece to see its details, edit the description, and see which outfits it's part of.
 
-### `npm start`
+**Outfits** - Browse the outfit collages you've created.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+**Builder** - Drag and drop pieces from your wardrobe onto a canvas to create outfit collages. Resize and arrange items however you want.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+**Stylist** - Chat with an AI style assistant that knows your wardrobe. Ask for outfit suggestions, get advice on what to wear, or just talk through styling ideas. The assistant remembers your preferences over time.
 
-### `npm test`
+## Setup
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. Install dependencies:
 
-### `npm run build`
+   ```
+   npm install
+   ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+2. Create a `.env` file with your Gemini API key:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+   ```
+   REACT_APP_GEMINI_API_KEY=your_api_key_here
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+3. Start the dev server:
+   ```
+   npm start
+   ```

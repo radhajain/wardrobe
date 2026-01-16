@@ -7,8 +7,13 @@ import { ProductDetailsSchema } from './schemas';
  * Extracts clothing item details from a product URL using Gemini
  */
 export async function extractProductDetails(
-	productUrl: string
+	productUrl: string,
+	signal?: AbortSignal
 ): Promise<Partial<Clothes>> {
+	// Check if already aborted
+	if (signal?.aborted) {
+		throw new DOMException('Aborted', 'AbortError');
+	}
 	const prompt = `Analyze this product URL and page content to extract clothing item details.
 
 URL: ${productUrl}
@@ -36,6 +41,7 @@ Important:
 			temperature: 0.1,
 			tools: [{ urlContext: {} }, { googleSearch: {} }],
 		},
+		signal,
 	});
 
 	const normalizedType = getValues(ClothingTypes).includes(

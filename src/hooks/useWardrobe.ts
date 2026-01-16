@@ -39,6 +39,31 @@ export const useWardrobe = () => {
 		setItems(itemsWithIds);
 	}, []);
 
+	const updateItem = useCallback(async (id: number, updates: Partial<Clothes>) => {
+		const currentItem = items.find((item) => item.id === id);
+		if (!currentItem) return;
+
+		const updatedItem: Clothes = {
+			name: updates.name ?? currentItem.name,
+			type: updates.type ?? currentItem.type,
+			color: updates.color ?? currentItem.color,
+			style: updates.style ?? currentItem.style,
+			designer: updates.designer ?? currentItem.designer,
+			productUrl: updates.productUrl ?? currentItem.productUrl,
+			imageUrl: updates.imageUrl ?? currentItem.imageUrl,
+			order: updates.order ?? currentItem.order,
+		};
+
+		await storage.updateClothingItem(id, updatedItem);
+		// Reload wardrobe to get updated list
+		const wardrobe = await storage.getWardrobe();
+		const itemsWithIds = wardrobe.map((item, index) => ({
+			...item,
+			id: index,
+		}));
+		setItems(itemsWithIds);
+	}, [items]);
+
 	const deleteItem = useCallback(async (id: number) => {
 		await storage.deleteClothingItem(id);
 		// Reload wardrobe to get updated list with correct IDs
@@ -50,5 +75,5 @@ export const useWardrobe = () => {
 		setItems(itemsWithIds);
 	}, []);
 
-	return { items, loading, getItemById, addItem, deleteItem };
+	return { items, loading, getItemById, addItem, updateItem, deleteItem };
 };

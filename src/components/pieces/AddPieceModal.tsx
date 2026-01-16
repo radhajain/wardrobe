@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Clothes, ClothingType } from '../../types';
 import './AddPieceModal.css';
 import { extractProductDetails } from '../../services/extractProductDetails';
@@ -27,6 +27,7 @@ export const AddPieceModal = ({ onClose, onAdd }: AddPieceModalProps) => {
 	const [productUrl, setProductUrl] = useState('');
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState('');
+	const abortControllerRef = useRef<AbortController | null>(null);
 
 	// Form fields
 	const [name, setName] = useState('');
@@ -44,11 +45,14 @@ export const AddPieceModal = ({ onClose, onAdd }: AddPieceModalProps) => {
 			return;
 		}
 
+		// Create a new AbortController for this request
+		abortControllerRef.current = new AbortController();
+
 		setIsLoading(true);
 		setError('');
 
 		try {
-			const details = await extractProductDetails(productUrl);
+			const details = await extractProductDetails(productUrl, abortControllerRef.current.signal);
 
 			// Populate form fields with extracted data
 			setName(details.name || '');
@@ -60,11 +64,16 @@ export const AddPieceModal = ({ onClose, onAdd }: AddPieceModalProps) => {
 
 			setShowForm(true);
 		} catch (err) {
+			// Don't show error if request was aborted
+			if (err instanceof Error && err.name === 'AbortError') {
+				return;
+			}
 			setError(
 				err instanceof Error ? err.message : 'Failed to fetch product details'
 			);
 		} finally {
 			setIsLoading(false);
+			abortControllerRef.current = null;
 		}
 	};
 
@@ -90,12 +99,19 @@ export const AddPieceModal = ({ onClose, onAdd }: AddPieceModalProps) => {
 	};
 
 	const handleSkipFetch = () => {
+		// Abort any in-progress fetch request
+		if (abortControllerRef.current) {
+			abortControllerRef.current.abort();
+			abortControllerRef.current = null;
+		}
+		setIsLoading(false);
+		setError('');
 		setShowForm(true);
 	};
 
 	return (
-		<div className="modal-overlay" onClick={onClose}>
-			<div className="modal" onClick={(e) => e.stopPropagation()}>
+		<div className="modal-overlay">
+			<div className="modal">
 				<div className="modal__header">
 					<h2 className="modal__title">Add New Piece</h2>
 					<button className="modal__close" onClick={onClose}>
@@ -134,9 +150,8 @@ export const AddPieceModal = ({ onClose, onAdd }: AddPieceModalProps) => {
 							<button
 								className="add-piece__skip-btn"
 								onClick={handleSkipFetch}
-								disabled={isLoading}
 							>
-								Skip and enter manually
+								{isLoading ? 'Skip' : 'Skip and enter manually'}
 							</button>
 						</div>
 					) : (

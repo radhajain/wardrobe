@@ -1,0 +1,182 @@
+.memory-modal-overlay {
+	position: fixed;
+	inset: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.memory-modal {
+	background-color: var(--color-surface);
+	border-radius: var(--radius-lg);
+	width: 90%;
+	max-width: 600px;
+	max-height: 80vh;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.memory-modal__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--spacing-md) var(--spacing-lg);
+	border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.memory-modal__title {
+	font-size: var(--font-size-lg);
+	font-weight: var(--font-weight-normal);
+	letter-spacing: var(--letter-spacing-tight);
+	margin: 0;
+}
+
+.memory-modal__close {
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: none;
+	border: none;
+	font-size: var(--font-size-xl);
+	color: var(--color-text-muted);
+	cursor: pointer;
+	border-radius: var(--radius-sm);
+	transition: all var(--transition-fast);
+}
+
+.memory-modal__close:hover {
+	background-color: var(--color-background-alt);
+	color: var(--color-text-primary);
+}
+
+.memory-modal__content {
+	flex: 1;
+	overflow-y: auto;
+	padding: var(--spacing-lg);
+}
+
+.memory-modal__intro {
+	color: var(--color-text-secondary);
+	font-size: var(--font-size-sm);
+	line-height: 1.5;
+	margin: 0 0 var(--spacing-lg) 0;
+}
+
+.memory-modal__section {
+	margin-bottom: var(--spacing-xl);
+}
+
+.memory-modal__section:last-child {
+	margin-bottom: 0;
+}
+
+.memory-modal__section-title {
+	font-size: var(--font-size-xs);
+	font-weight: var(--font-weight-medium);
+	text-transform: uppercase;
+	letter-spacing: var(--letter-spacing-wide);
+	color: var(--color-text-secondary);
+	margin: 0 0 var(--spacing-md) 0;
+}
+
+.memory-modal__profile {
+	background-color: var(--color-background-alt);
+	padding: var(--spacing-md);
+	border-radius: var(--radius-md);
+}
+
+.memory-modal__profile p {
+	margin: 0 0 var(--spacing-sm) 0;
+	font-size: var(--font-size-sm);
+	line-height: 1.6;
+	color: var(--color-text-primary);
+}
+
+.memory-modal__profile p:last-child {
+	margin-bottom: 0;
+}
+
+.memory-modal__reflections {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-md);
+}
+
+.memory-modal__reflection {
+	background-color: var(--color-background-alt);
+	padding: var(--spacing-md);
+	border-radius: var(--radius-md);
+}
+
+.memory-modal__reflection-label {
+	display: block;
+	font-size: var(--font-size-xs);
+	font-weight: var(--font-weight-medium);
+	color: var(--color-text-muted);
+	margin-bottom: var(--spacing-xs);
+}
+
+.memory-modal__reflection p {
+	margin: 0;
+	font-size: var(--font-size-sm);
+	line-height: 1.5;
+	color: var(--color-text-primary);
+}
+
+.memory-modal__date {
+	display: block;
+	font-size: var(--font-size-xs);
+	color: var(--color-text-muted);
+	margin-top: var(--spacing-sm);
+}
+
+.memory-modal__queries {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-xs);
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.memory-modal__query {
+	display: flex;
+	gap: var(--spacing-sm);
+	padding: var(--spacing-sm);
+	background-color: var(--color-background-alt);
+	border-radius: var(--radius-sm);
+	font-size: var(--font-size-sm);
+}
+
+.memory-modal__query-source {
+	flex-shrink: 0;
+	padding: 2px var(--spacing-xs);
+	background-color: var(--color-border);
+	border-radius: var(--radius-xs);
+	font-size: var(--font-size-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	color: var(--color-text-secondary);
+}
+
+.memory-modal__query-text {
+	color: var(--color-text-primary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.memory-modal__empty {
+	text-align: center;
+	padding: var(--spacing-xl);
+	color: var(--color-text-muted);
+}
+
+.memory-modal__empty p {
+	margin: 0;
+	line-height: 1.5;
+}

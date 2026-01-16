@@ -13,6 +13,7 @@ function App() {
 				<Routes>
 					<Route path="/" element={<Navigate to="/pieces" replace />} />
 					<Route path="/pieces" element={<PiecesPage />} />
+					<Route path="/pieces/:pieceId" element={<PiecesPage />} />
 					<Route path="/outfits" element={<OutfitsPage />} />
 					<Route path="/builder" element={<BuilderPage />} />
 					<Route path="/builder/:id" element={<BuilderPage />} />

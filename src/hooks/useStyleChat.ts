@@ -32,6 +32,7 @@ interface UseStyleChatReturn {
 	isLoading: boolean;
 	error: string | null;
 	sendMessage: (content: string) => Promise<void>;
+	regenerateMessage: (messageId: string) => Promise<void>;
 	clearChat: () => void;
 }
 
@@ -91,6 +92,57 @@ export function useStyleChat(wardrobe: ClothesWithId[]): UseStyleChatReturn {
 		[messages, wardrobe, isLoading]
 	);
 
+	const regenerateMessage = useCallback(
+		async (messageId: string) => {
+			if (isLoading) return;
+
+			// Find the message index
+			const messageIndex = messages.findIndex((m) => m.id === messageId);
+			if (messageIndex === -1) return;
+
+			// Find the preceding user message
+			let userMessageIndex = messageIndex - 1;
+			while (userMessageIndex >= 0 && messages[userMessageIndex].role !== 'user') {
+				userMessageIndex--;
+			}
+
+			if (userMessageIndex < 0) return;
+
+			const userMessage = messages[userMessageIndex];
+
+			setError(null);
+			setIsLoading(true);
+
+			// Remove the assistant message being regenerated (and any after it)
+			const messagesBeforeRegen = messages.slice(0, messageIndex);
+			setMessages(messagesBeforeRegen);
+
+			// Update storage to match
+			chatStorage.clearConversation();
+			messagesBeforeRegen.forEach((m) => chatStorage.addMessage(m));
+
+			try {
+				// Get new AI response
+				const assistantMessage = await sendStyleChat(
+					userMessage.content,
+					wardrobe,
+					messagesBeforeRegen
+				);
+
+				// Add new assistant message
+				setMessages((prev) => [...prev, assistantMessage]);
+				chatStorage.addMessage(assistantMessage);
+			} catch (err) {
+				const errorMessage =
+					err instanceof Error ? err.message : 'Failed to get response';
+				setError(errorMessage);
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[messages, wardrobe, isLoading]
+	);
+
 	const clearChat = useCallback(() => {
 		chatStorage.clearConversation();
 		setMessages([]);
@@ -102,6 +154,7 @@ export function useStyleChat(wardrobe: ClothesWithId[]): UseStyleChatReturn {
 		isLoading,
 		error,
 		sendMessage,
+		regenerateMessage,
 		clearChat,
 	};
 }

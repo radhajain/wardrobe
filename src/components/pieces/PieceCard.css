@@ -1,12 +1,24 @@
 .piece-card {
 	display: flex;
 	flex-direction: column;
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	text-align: left;
+	width: 100%;
 }
 
 .piece-card__image-container {
 	aspect-ratio: 3 / 4;
 	overflow: hidden;
 	background-color: var(--color-background-alt);
+	border: 2px solid transparent;
+	transition: border-color var(--transition-fast);
+}
+
+.piece-card--selected .piece-card__image-container {
+	border-color: var(--color-text-primary);
 }
 
 .piece-card__image {
@@ -39,4 +51,10 @@
 	font-size: var(--font-size-sm);
 	color: var(--color-text-muted);
 	line-height: 1.3;
+	margin: 0;
+}
+
+.piece-card--selected .piece-card__name {
+	color: var(--color-text-primary);
+	font-weight: var(--font-weight-medium);
 }

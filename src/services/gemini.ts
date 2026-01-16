@@ -30,15 +30,32 @@ export async function generateStructured<T>({
 	schema,
 	options,
 	model,
+	signal,
 }: {
 	prompt: string;
 	schema: z.ZodSchema<T>;
 	options?: { temperature?: number; tools?: ToolListUnion };
 	model?: string;
+	signal?: AbortSignal;
 }): Promise<T> {
+	// Check if already aborted before making the request
+	if (signal?.aborted) {
+		throw new DOMException('Aborted', 'AbortError');
+	}
+
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const jsonSchema = zodToJsonSchema(schema as any) as object;
-	const response = await getClient().models.generateContent({
+
+	// Create a promise that rejects when the signal is aborted
+	const abortPromise = signal
+		? new Promise<never>((_, reject) => {
+				signal.addEventListener('abort', () => {
+					reject(new DOMException('Aborted', 'AbortError'));
+				});
+		  })
+		: null;
+
+	const requestPromise = getClient().models.generateContent({
 		model: model ?? MODEL,
 		contents: prompt,
 		config: {
@@ -49,6 +66,12 @@ export async function generateStructured<T>({
 			tools: options?.tools ?? [],
 		},
 	});
+
+	// Race between the request and abort signal
+	const response = abortPromise
+		? await Promise.race([requestPromise, abortPromise])
+		: await requestPromise;
+
 	const text = response.text;
 	if (!text) {
 		throw new Error('No response from Gemini');
@@ -68,7 +91,7 @@ export async function generateText(
 		contents: prompt,
 		config: {
 			temperature: options?.temperature ?? 0.7,
-			maxOutputTokens: options?.maxTokens ?? 2048,
+			maxOutputTokens: options?.maxTokens ?? 20048,
 		},
 	});
 	const text = response.text;

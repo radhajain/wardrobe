@@ -3,11 +3,17 @@ import './PieceCard.css';
 
 interface PieceCardProps {
 	piece: ClothesWithId;
+	isSelected?: boolean;
+	onClick?: () => void;
 }
 
-export const PieceCard = ({ piece }: PieceCardProps) => {
+export const PieceCard = ({ piece, isSelected, onClick }: PieceCardProps) => {
 	return (
-		<div className="piece-card">
+		<button
+			className={`piece-card ${isSelected ? 'piece-card--selected' : ''}`}
+			onClick={onClick}
+			type="button"
+		>
 			<div className="piece-card__image-container">
 				{piece.imageUrl ? (
 					<img
@@ -24,6 +30,6 @@ export const PieceCard = ({ piece }: PieceCardProps) => {
 			<div className="piece-card__info">
 				<p className="piece-card__name">{piece.name}</p>
 			</div>
-		</div>
+		</button>
 	);
 };

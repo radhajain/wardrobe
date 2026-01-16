@@ -26,6 +26,24 @@
 	gap: var(--spacing-sm);
 }
 
+.stylist-page__memory-btn {
+	padding: var(--spacing-xs) var(--spacing-md);
+	background: none;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-sm);
+	font-size: var(--font-size-xs);
+	color: var(--color-text-secondary);
+	text-transform: uppercase;
+	letter-spacing: var(--letter-spacing-wide);
+	cursor: pointer;
+	transition: all var(--transition-fast);
+}
+
+.stylist-page__memory-btn:hover {
+	border-color: var(--color-text-secondary);
+	color: var(--color-text-primary);
+}
+
 .stylist-page__assessment-btn {
 	padding: var(--spacing-xs) var(--spacing-md);
 	background: none;
