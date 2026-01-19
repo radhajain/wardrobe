@@ -86,6 +86,23 @@
 	overflow: hidden;
 }
 
+.product-card__sizes {
+	display: flex;
+	gap: var(--spacing-xs);
+	font-size: var(--font-size-xs);
+	color: var(--color-text-secondary);
+}
+
+.product-card__sizes-label {
+	flex-shrink: 0;
+}
+
+.product-card__sizes-list {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .product-card__link {
 	font-size: var(--font-size-xs);
 	color: var(--color-text-secondary);

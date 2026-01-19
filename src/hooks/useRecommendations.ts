@@ -7,11 +7,8 @@ import {
 	SuggestionStatus,
 } from '../types';
 import { recommendationStorage } from '../services/recommendationStorage';
-import {
-	generatePieceSuggestions,
-	searchProducts,
-	searchDirectItem,
-} from '../services/recommendationService';
+import { generatePieceSuggestions } from '../services/recommendationService';
+import { searchDirectItem, searchProducts } from '../services/searchProducts';
 
 interface UseRecommendationsReturn {
 	session: RecommendationSession | null;
@@ -128,7 +125,9 @@ export function useRecommendations(
 				...session,
 				step: 'search',
 				searchResults: [
-					...session.searchResults.filter((r) => r.suggestionId !== suggestionId),
+					...session.searchResults.filter(
+						(r) => r.suggestionId !== suggestionId
+					),
 					loadingResult,
 				],
 			};
@@ -164,7 +163,9 @@ export function useRecommendations(
 					searchedAt: new Date().toISOString(),
 					status: 'error',
 					error:
-						err instanceof Error ? err.message : 'Failed to search for products',
+						err instanceof Error
+							? err.message
+							: 'Failed to search for products',
 				};
 
 				const updated: RecommendationSession = {

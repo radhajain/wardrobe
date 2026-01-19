@@ -277,6 +277,8 @@ export interface ProductResult {
 	imageUrl: string | null;
 	/** Whether retailer is in user's preferred stores */
 	isPreferredStore: boolean;
+	/** Available sizes for the product */
+	availableSizes?: string[];
 }
 
 /**

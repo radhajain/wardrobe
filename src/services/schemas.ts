@@ -85,10 +85,45 @@ export const ProductSearchResultsSchema = z
 			imageUrl: z.string().nullable(),
 		})
 	)
-	.min(3)
-	.max(10);
+	.min(2)
+	.max(3);
 
 export type PieceSuggestionsResponse = z.infer<typeof PieceSuggestionsSchema>;
 export type ProductSearchResultsResponse = z.infer<
 	typeof ProductSearchResultsSchema
 >;
+
+/**
+ * Schema for URL verification results with enriched product data
+ */
+export const UrlVerificationSchema = z.array(
+	z.object({
+		url: z.string().describe('The URL that was checked'),
+		isValid: z
+			.boolean()
+			.describe(
+				'True if the page loads and shows an available product for sale'
+			),
+		reason: z
+			.string()
+			.optional()
+			.describe(
+				'Reason for the valid or invalid status: "404", "out of stock", "item unavailable", "page error", etc.'
+			),
+		imageUrl: z
+			.string()
+			.nullable()
+			.optional()
+			.describe(
+				'The main product image URL extracted from the page (high resolution if available)'
+			),
+		availableSizes: z
+			.array(z.string())
+			.optional()
+			.describe(
+				'List of available sizes for the product (e.g., ["XS", "S", "M", "L"] or ["6", "8", "10"])'
+			),
+	})
+);
+
+export type UrlVerificationResponse = z.infer<typeof UrlVerificationSchema>;

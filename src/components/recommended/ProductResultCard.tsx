@@ -62,6 +62,15 @@ export function ProductResultCard({ product }: ProductResultCardProps) {
 
 				<h3 className="product-card__name">{product.name}</h3>
 
+				{product.availableSizes && product.availableSizes.length > 0 && (
+					<div className="product-card__sizes">
+						<span className="product-card__sizes-label">Sizes:</span>
+						<span className="product-card__sizes-list">
+							{product.availableSizes.join(', ')}
+						</span>
+					</div>
+				)}
+
 				<span className="product-card__link">View Product →</span>
 			</div>
 		</a>
