@@ -167,7 +167,7 @@ export async function removeBackground(imageUrl: string): Promise<string> {
 	const base64Data = imageBase64.split(',')[1];
 	const mimeType = imageBase64.split(';')[0].split(':')[1];
 
-	if (!process.env.REACT_APP_GEMINI_API_KEY) {
+	if (!import.meta.env.GEMINI_API_KEY) {
 		// Fall back to simple background removal without API
 		return removeBackgroundSimple(imageBase64);
 	}

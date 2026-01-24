@@ -25,10 +25,10 @@ A personal wardrobe management app for cataloging your clothes and creating outf
    npm install
    ```
 
-2. Create a `.env` file with your Gemini API key:
+2. Create a `.env.local` file with your Gemini API key:
 
    ```
-   REACT_APP_GEMINI_API_KEY=your_api_key_here
+   GEMINI_API_KEY=your_api_key_here
    ```
 
 3. Start the dev server:

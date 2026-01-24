@@ -11,7 +11,7 @@ import './PiecesPage.css';
 export const PiecesPage = () => {
 	const { pieceId } = useParams<{ pieceId?: string }>();
 	const navigate = useNavigate();
-	const { items, loading, addItem, updateItem } = useWardrobe();
+	const { items, loading, addItem, updateItem, deleteItem } = useWardrobe();
 	const { outfits } = useOutfits();
 	const [showAddModal, setShowAddModal] = useState(false);
 
@@ -55,6 +55,11 @@ export const PiecesPage = () => {
 		await updateItem(id, updates);
 	};
 
+	const handleDeletePiece = async (id: number) => {
+		await deleteItem(id);
+		navigate('/pieces');
+	};
+
 	if (loading) {
 		return (
 			<div className="pieces-page">
@@ -89,6 +94,7 @@ export const PiecesPage = () => {
 							outfitsUsingPiece={outfitsUsingPiece}
 							wardrobeItems={items}
 							onUpdate={handleUpdatePiece}
+							onDelete={handleDeletePiece}
 							onClose={handleCloseDetail}
 						/>
 					) : undefined

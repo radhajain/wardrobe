@@ -9,6 +9,7 @@ interface PieceDetailProps {
 	outfitsUsingPiece: Outfit[];
 	wardrobeItems: ClothesWithId[];
 	onUpdate: (id: number, updates: Partial<Clothes>) => Promise<void>;
+	onDelete: (id: number) => Promise<void>;
 	onClose: () => void;
 }
 
@@ -20,12 +21,15 @@ export function PieceDetail({
 	outfitsUsingPiece,
 	wardrobeItems,
 	onUpdate,
+	onDelete,
 	onClose,
 }: PieceDetailProps) {
 	const navigate = useNavigate();
 	const [isEditing, setIsEditing] = useState(false);
 	const [editedStyle, setEditedStyle] = useState(piece.style);
 	const [isSaving, setIsSaving] = useState(false);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
 
 	// Tag editing state
 	const [editingTag, setEditingTag] = useState<'type' | 'color' | null>(null);
@@ -63,6 +67,13 @@ export function PieceDetail({
 
 	const handleOutfitClick = (outfitId: string) => {
 		navigate(`/builder/${outfitId}`);
+	};
+
+	const handleDelete = async () => {
+		setIsDeleting(true);
+		await onDelete(piece.id);
+		setIsDeleting(false);
+		onClose();
 	};
 
 	/**
@@ -228,6 +239,42 @@ export function PieceDetail({
 								View Product Page
 							</a>
 						)}
+
+						<div className="piece-detail__actions">
+							{showDeleteConfirm ? (
+								<div className="piece-detail__delete-confirm">
+									<span className="piece-detail__delete-warning">
+										Delete this piece?
+										{outfitsUsingPiece.length > 0 && (
+											<> It will be removed from {outfitsUsingPiece.length} outfit{outfitsUsingPiece.length !== 1 ? 's' : ''}.</>
+										)}
+									</span>
+									<div className="piece-detail__delete-buttons">
+										<button
+											className="piece-detail__btn piece-detail__btn--secondary"
+											onClick={() => setShowDeleteConfirm(false)}
+											disabled={isDeleting}
+										>
+											Cancel
+										</button>
+										<button
+											className="piece-detail__btn piece-detail__btn--delete"
+											onClick={handleDelete}
+											disabled={isDeleting}
+										>
+											{isDeleting ? 'Deleting...' : 'Delete'}
+										</button>
+									</div>
+								</div>
+							) : (
+								<button
+									className="piece-detail__delete-trigger"
+									onClick={() => setShowDeleteConfirm(true)}
+								>
+									Delete Piece
+								</button>
+							)}
+						</div>
 					</div>
 				</div>
 

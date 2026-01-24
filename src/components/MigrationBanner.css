@@ -1,0 +1,83 @@
+.migration-banner {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	background: #fefce8;
+	border-bottom: 1px solid #fef08a;
+	padding: 1rem;
+	z-index: 1000;
+}
+
+.migration-banner__content {
+	max-width: 800px;
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.migration-banner__text {
+	margin: 0;
+	color: #713f12;
+	font-size: 0.875rem;
+}
+
+.migration-banner__success {
+	margin: 0;
+	color: #166534;
+	font-size: 0.875rem;
+}
+
+.migration-banner__error {
+	margin: 0;
+	color: #b91c1c;
+	font-size: 0.875rem;
+}
+
+.migration-banner__progress {
+	height: 4px;
+	background: #fef08a;
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.migration-banner__progress-bar {
+	height: 100%;
+	background: #ca8a04;
+	transition: width 0.3s ease;
+}
+
+.migration-banner__actions {
+	display: flex;
+	gap: 0.75rem;
+}
+
+.migration-banner__button {
+	padding: 0.5rem 1rem;
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	border: none;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.migration-banner__button--primary {
+	background: #333;
+	color: white;
+}
+
+.migration-banner__button--primary:hover {
+	background: #000;
+}
+
+.migration-banner__button--secondary {
+	background: transparent;
+	color: #713f12;
+	border: 1px solid #fef08a;
+}
+
+.migration-banner__button--secondary:hover {
+	background: #fef08a;
+}
