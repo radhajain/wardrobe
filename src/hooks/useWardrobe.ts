@@ -1,25 +1,46 @@
 import { useState, useEffect, useCallback } from 'react';
-import { storage } from '../services/storage';
+import { useAuthenticate } from '@neondatabase/neon-js/auth/react';
+import { storage, setCurrentUser, getCurrentUser } from '../services/storage';
 import { ClothesWithId, Clothes } from '../types';
 
 /**
  * Hook to access and manage wardrobe items.
- * Items are stored in localStorage and loaded on mount.
+ * Items are stored in the database and loaded when user is authenticated.
  */
 export const useWardrobe = () => {
+	const { data } = useAuthenticate();
+	const user = data?.user;
 	const [items, setItems] = useState<ClothesWithId[]>([]);
 	const [loading, setLoading] = useState(true);
 
-	useEffect(() => {
-		storage.getWardrobe().then((wardrobe) => {
-			const itemsWithIds = wardrobe.map((item, index) => ({
-				...item,
-				id: index,
-			}));
-			setItems(itemsWithIds);
+	const loadWardrobe = useCallback(async () => {
+		if (!getCurrentUser()) {
 			setLoading(false);
-		});
+			return;
+		}
+
+		try {
+			const wardrobe = await storage.getWardrobe();
+			setItems(wardrobe);
+		} catch (error) {
+			console.error('Failed to load wardrobe:', error);
+		} finally {
+			setLoading(false);
+		}
 	}, []);
+
+	// Set current user and reload wardrobe when user changes
+	useEffect(() => {
+		if (user) {
+			setCurrentUser(user.id);
+			setLoading(true);
+			loadWardrobe();
+		} else {
+			setCurrentUser(null);
+			setItems([]);
+			setLoading(false);
+		}
+	}, [user, loadWardrobe]);
 
 	const getItemById = useCallback(
 		(id: number): ClothesWithId | undefined => {
@@ -29,14 +50,9 @@ export const useWardrobe = () => {
 	);
 
 	const addItem = useCallback(async (item: Clothes) => {
-		await storage.addClothingItem(item);
-		// Reload wardrobe to get updated list with correct IDs
-		const wardrobe = await storage.getWardrobe();
-		const itemsWithIds = wardrobe.map((item, index) => ({
-			...item,
-			id: index,
-		}));
-		setItems(itemsWithIds);
+		const newItem = await storage.addClothingItem(item);
+		setItems((prev) => [...prev, newItem]);
+		return newItem;
 	}, []);
 
 	const updateItem = useCallback(async (id: number, updates: Partial<Clothes>) => {
@@ -54,25 +70,16 @@ export const useWardrobe = () => {
 			order: updates.order ?? currentItem.order,
 		};
 
-		await storage.updateClothingItem(id, updatedItem);
-		// Reload wardrobe to get updated list
-		const wardrobe = await storage.getWardrobe();
-		const itemsWithIds = wardrobe.map((item, index) => ({
-			...item,
-			id: index,
-		}));
-		setItems(itemsWithIds);
+		const updated = await storage.updateClothingItem(id, updatedItem);
+		setItems((prev) =>
+			prev.map((item) => (item.id === id ? updated : item))
+		);
+		return updated;
 	}, [items]);
 
 	const deleteItem = useCallback(async (id: number) => {
 		await storage.deleteClothingItem(id);
-		// Reload wardrobe to get updated list with correct IDs
-		const wardrobe = await storage.getWardrobe();
-		const itemsWithIds = wardrobe.map((item, index) => ({
-			...item,
-			id: index,
-		}));
-		setItems(itemsWithIds);
+		setItems((prev) => prev.filter((item) => item.id !== id));
 	}, []);
 
 	return { items, loading, getItemById, addItem, updateItem, deleteItem };

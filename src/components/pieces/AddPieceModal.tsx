@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Clothes, ClothingType } from '../../types';
 import './AddPieceModal.css';
 import { extractProductDetails } from '../../services/extractProductDetails';
+import { ImageSourceSelector } from './ImageSourceSelector';
 
 interface AddPieceModalProps {
 	onClose: () => void;
@@ -36,6 +37,8 @@ export const AddPieceModal = ({ onClose, onAdd }: AddPieceModalProps) => {
 	const [style, setStyle] = useState('');
 	const [designer, setDesigner] = useState('');
 	const [imageUrl, setImageUrl] = useState('');
+	const [productImages, setProductImages] = useState<string[]>([]);
+	const [uploadedImageBase64, setUploadedImageBase64] = useState<string | null>(null);
 
 	const [showForm, setShowForm] = useState(false);
 
@@ -61,6 +64,8 @@ export const AddPieceModal = ({ onClose, onAdd }: AddPieceModalProps) => {
 			setStyle(details.style || '');
 			setDesigner(details.designer || '');
 			setImageUrl(details.imageUrl || '');
+			setProductImages(details.imageUrls || []);
+			setUploadedImageBase64(null);
 
 			setShowForm(true);
 		} catch (err) {
@@ -85,6 +90,9 @@ export const AddPieceModal = ({ onClose, onAdd }: AddPieceModalProps) => {
 			return;
 		}
 
+		// Use uploaded base64 image or URL-based image
+		const finalImageUrl = uploadedImageBase64 || imageUrl.trim() || undefined;
+
 		const piece: Clothes = {
 			name: name.trim(),
 			type,
@@ -92,7 +100,7 @@ export const AddPieceModal = ({ onClose, onAdd }: AddPieceModalProps) => {
 			style: style.trim(),
 			designer: designer.trim(),
 			productUrl: productUrl.trim() || undefined,
-			imageUrl: imageUrl.trim() || undefined,
+			imageUrl: finalImageUrl,
 		};
 
 		onAdd(piece);
@@ -156,15 +164,18 @@ export const AddPieceModal = ({ onClose, onAdd }: AddPieceModalProps) => {
 						</div>
 					) : (
 						<form className="add-piece__form" onSubmit={handleSubmit}>
-							{imageUrl && (
-								<div className="add-piece__preview">
-									<img
-										src={imageUrl}
-										alt="Product preview"
-										className="add-piece__preview-image"
-									/>
-								</div>
-							)}
+							<ImageSourceSelector
+								selectedImageUrl={uploadedImageBase64 || imageUrl}
+								productImages={productImages}
+								onImageSelect={(url) => {
+									setImageUrl(url);
+									setUploadedImageBase64(null);
+								}}
+								onFileUpload={(base64) => {
+									setUploadedImageBase64(base64);
+									setImageUrl('');
+								}}
+							/>
 
 							<div className="add-piece__field">
 								<label htmlFor="name">Name *</label>
@@ -223,17 +234,6 @@ export const AddPieceModal = ({ onClose, onAdd }: AddPieceModalProps) => {
 									value={style}
 									onChange={(e) => setStyle(e.target.value)}
 									placeholder="Materials, fit, details..."
-								/>
-							</div>
-
-							<div className="add-piece__field">
-								<label htmlFor="imageUrl">Image URL</label>
-								<input
-									id="imageUrl"
-									type="url"
-									value={imageUrl}
-									onChange={(e) => setImageUrl(e.target.value)}
-									placeholder="https://..."
 								/>
 							</div>
 

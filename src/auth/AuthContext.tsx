@@ -2,6 +2,7 @@ import { createContext, ReactNode, useContext, useMemo, useRef } from 'react';
 import { useAuthenticate } from '@neondatabase/neon-js/auth/react';
 import { authClient } from './client';
 import { ensureUserExists } from '../services/userSync';
+import { setCurrentUser } from '../services/storage';
 
 /**
  * User type from session
@@ -40,14 +41,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		};
 	}, [data?.user?.id, data?.user?.email, data?.user?.name]);
 
-	// Sync user to our database when they sign in (without useEffect)
+	// Sync user to our database and set current user for storage when they sign in
 	if (user && syncedUserIdRef.current !== user.id) {
 		syncedUserIdRef.current = user.id;
+		setCurrentUser(user.id);
 		ensureUserExists(user).catch(console.error);
+	}
+
+	// Clear current user when signed out
+	if (!user && syncedUserIdRef.current !== null) {
+		syncedUserIdRef.current = null;
+		setCurrentUser(null);
 	}
 
 	const handleSignOut = async () => {
 		syncedUserIdRef.current = null;
+		setCurrentUser(null);
 		await authClient.signOut();
 	};
 

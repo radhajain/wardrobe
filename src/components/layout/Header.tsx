@@ -1,5 +1,4 @@
 import { NavLink } from 'react-router-dom';
-import { UserButton } from '@neondatabase/neon-js/auth/react';
 import './Header.css';
 
 export const Header = () => {
@@ -61,7 +60,14 @@ export const Header = () => {
 						</NavLink>
 					</li>
 				</ul>
-				<UserButton size="icon"/>
+				<NavLink
+					to="/account"
+					className={({ isActive }) =>
+						isActive ? 'header__link header__link--active' : 'header__link'
+					}
+				>
+					Account
+				</NavLink>
 			</nav>
 		</header>
 	);

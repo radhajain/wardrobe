@@ -14,6 +14,7 @@ export const users = pgTable('users', {
 
 /**
  * Wardrobe pieces table
+ * Note: Has a partial unique index on (user_id, product_url) WHERE product_url IS NOT NULL
  */
 export const pieces = pgTable('pieces', {
 	id: serial('id').primaryKey(),

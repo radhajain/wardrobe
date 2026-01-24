@@ -98,15 +98,6 @@ export interface DragItem {
 }
 
 /**
- * Storage data structure
- */
-export interface StorageData {
-	outfits: Outfit[];
-	wardrobe: Clothes[];
-	version: number;
-}
-
-/**
  * Chat message role
  */
 export type ChatRole = 'user' | 'assistant';
