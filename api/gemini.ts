@@ -1,24 +1,20 @@
 import { GoogleGenAI } from '@google/genai';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const MODEL = 'gemini-3-flash-preview';
 
-export const config = {
-	runtime: 'edge',
-};
-
-export default async function handler(req: Request) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
 	if (req.method !== 'POST') {
-		return new Response('Method not allowed', { status: 405 });
+		return res.status(405).send('Method not allowed');
 	}
 
 	const apiKey = process.env.GEMINI_API_KEY;
 	if (!apiKey) {
-		return new Response('Gemini API key not configured', { status: 500 });
+		return res.status(500).send('Gemini API key not configured');
 	}
 
 	try {
-		const body = await req.json();
-		const { action, prompt, systemInstruction, config: reqConfig, imageData } = body;
+		const { action, prompt, systemInstruction, config: reqConfig, imageData } = req.body;
 
 		const client = new GoogleGenAI({ apiKey });
 
@@ -36,7 +32,7 @@ export default async function handler(req: Request) {
 				},
 			});
 
-			return Response.json({ text: response.text });
+			return res.json({ text: response.text });
 		}
 
 		if (action === 'generateText') {
@@ -49,7 +45,7 @@ export default async function handler(req: Request) {
 				},
 			});
 
-			return Response.json({ text: response.text });
+			return res.json({ text: response.text });
 		}
 
 		if (action === 'generateWithImage') {
@@ -83,15 +79,14 @@ export default async function handler(req: Request) {
 				config,
 			});
 
-			return Response.json({ text: response.text });
+			return res.json({ text: response.text });
 		}
 
-		return new Response('Invalid action', { status: 400 });
+		return res.status(400).send('Invalid action');
 	} catch (error) {
 		console.error('Gemini API error:', error);
-		return new Response(
-			JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-			{ status: 500, headers: { 'Content-Type': 'application/json' } }
-		);
+		return res.status(500).json({
+			error: error instanceof Error ? error.message : 'Unknown error'
+		});
 	}
 }

@@ -27,7 +27,7 @@ export const ProductDetailsSchema = z.object({
 	style: z.string(),
 	designer: z.string(),
 	imageUrl: z.string(),
-	imageUrls: z.array(z.string()),
+	imageUrls: z.array(z.string()).max(3),
 });
 
 /**

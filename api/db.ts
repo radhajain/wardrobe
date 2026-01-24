@@ -9,10 +9,7 @@ import {
 	timestamp,
 	jsonb,
 } from 'drizzle-orm/pg-core';
-
-export const config = {
-	runtime: 'edge',
-};
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Define schema inline for the API route
 const users = pgTable('users', {
@@ -57,17 +54,16 @@ function getDb() {
 	return drizzle(sql, { schema: { users, pieces, outfits } });
 }
 
-export default async function handler(req: Request) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
 	if (req.method !== 'POST') {
-		return new Response('Method not allowed', { status: 405 });
+		return res.status(405).send('Method not allowed');
 	}
 
 	try {
-		const body = await req.json();
-		const { action, userId, data, id } = body;
+		const { action, userId, data, id } = req.body;
 
 		if (!userId) {
-			return new Response('Unauthorized', { status: 401 });
+			return res.status(401).send('Unauthorized');
 		}
 
 		const db = getDb();
@@ -82,13 +78,13 @@ export default async function handler(req: Request) {
 					name: data.name,
 				});
 			}
-			return Response.json({ success: true });
+			return res.json({ success: true });
 		}
 
 		// Piece operations
 		if (action === 'getPieces') {
 			const records = await db.select().from(pieces).where(eq(pieces.userId, userId));
-			return Response.json({ pieces: records });
+			return res.json({ pieces: records });
 		}
 
 		if (action === 'addPiece') {
@@ -109,7 +105,7 @@ export default async function handler(req: Request) {
 					orderRetailer: data.order?.retailer ?? null,
 				})
 				.returning();
-			return Response.json({ piece: inserted });
+			return res.json({ piece: inserted });
 		}
 
 		if (action === 'updatePiece') {
@@ -130,7 +126,7 @@ export default async function handler(req: Request) {
 				})
 				.where(eq(pieces.id, id))
 				.returning();
-			return Response.json({ piece: updated });
+			return res.json({ piece: updated });
 		}
 
 		if (action === 'deletePiece') {
@@ -152,23 +148,23 @@ export default async function handler(req: Request) {
 				}
 			}
 
-			return Response.json({ success: true, deletedBlobUrl: piece?.persistedImageUrl });
+			return res.json({ success: true, deletedBlobUrl: piece?.persistedImageUrl });
 		}
 
 		if (action === 'getPiece') {
 			const [piece] = await db.select().from(pieces).where(eq(pieces.id, id));
-			return Response.json({ piece: piece || null });
+			return res.json({ piece: piece || null });
 		}
 
 		// Outfit operations
 		if (action === 'getOutfits') {
 			const records = await db.select().from(outfits).where(eq(outfits.userId, userId));
-			return Response.json({ outfits: records });
+			return res.json({ outfits: records });
 		}
 
 		if (action === 'getOutfit') {
 			const [record] = await db.select().from(outfits).where(eq(outfits.id, id));
-			return Response.json({ outfit: record || null });
+			return res.json({ outfit: record || null });
 		}
 
 		if (action === 'saveOutfit') {
@@ -191,20 +187,19 @@ export default async function handler(req: Request) {
 					items: data.items,
 				});
 			}
-			return Response.json({ success: true });
+			return res.json({ success: true });
 		}
 
 		if (action === 'deleteOutfit') {
 			await db.delete(outfits).where(eq(outfits.id, id));
-			return Response.json({ success: true });
+			return res.json({ success: true });
 		}
 
-		return new Response('Invalid action', { status: 400 });
+		return res.status(400).send('Invalid action');
 	} catch (error) {
 		console.error('Database API error:', error);
-		return new Response(
-			JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-			{ status: 500, headers: { 'Content-Type': 'application/json' } }
-		);
+		return res.status(500).json({
+			error: error instanceof Error ? error.message : 'Unknown error'
+		});
 	}
 }

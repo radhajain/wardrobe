@@ -32,13 +32,13 @@ Extract the following information:
   "style": "Brief style description (materials, fit, details)",
   "designer": "Brand or designer name",
   "imageUrl": "Main product image URL (the primary/hero product image)",
-  "imageUrls": ["Array of ALL product image URLs found on the page"]
+  "imageUrls": ["Array of first 3 product image URLs found on the page"]
 }
 
 Important:
 - For "type", choose the most appropriate category from the list
 - For "imageUrl", find the best quality primary product image URL
-- For "imageUrls", include ALL product images (main image, alternate views, detail shots). Maximum 8 images. Prioritize high-quality product photos over lifestyle images. Include the main image as the first element.
+- For "imageUrls", include first 3 product images (main image, alternate views, detail shots). Maximum 3 images. Prioritize high-quality product photos over lifestyle images. Include the main image as the first element.
 - If you can't determine a field, use an empty string (or empty array for imageUrls)`;
 
 	const result = await generateStructured({
@@ -48,7 +48,7 @@ Important:
 		options: {
 			temperature: 0.1,
 			tools: [{ urlContext: {} }, { googleSearch: {} }],
-			maxTokens: 2048,
+			maxTokens: 8048,
 		},
 		signal,
 	});
