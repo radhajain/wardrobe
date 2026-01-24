@@ -1,0 +1,182 @@
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { eq, isNull, isNotNull, and } from 'drizzle-orm';
+import { pgTable, serial, text, uuid, timestamp } from 'drizzle-orm/pg-core';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { put } from '@vercel/blob';
+
+// Define pieces schema inline
+const pieces = pgTable('pieces', {
+	id: serial('id').primaryKey(),
+	userId: uuid('user_id').notNull(),
+	name: text('name').notNull(),
+	type: text('type').notNull(),
+	color: text('color').notNull().default(''),
+	style: text('style').notNull().default(''),
+	designer: text('designer').notNull().default(''),
+	productUrl: text('product_url'),
+	originalImageUrl: text('original_image_url'),
+	persistedImageUrl: text('persisted_image_url'),
+	orderNumber: text('order_number'),
+	orderDate: text('order_date'),
+	orderRetailer: text('order_retailer'),
+	createdAt: timestamp('created_at').defaultNow(),
+});
+
+function generateFilename(originalUrl?: string): string {
+	const timestamp = Date.now();
+	const random = Math.random().toString(36).substring(2, 8);
+
+	let extension = 'jpg';
+	if (originalUrl) {
+		const ext = originalUrl.split('.').pop()?.toLowerCase().split('?')[0];
+		if (ext && ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'].includes(ext)) {
+			extension = ext === 'jpeg' ? 'jpg' : ext;
+		}
+	}
+
+	return `wardrobe/${timestamp}-${random}.${extension}`;
+}
+
+async function uploadImageToBlob(imageUrl: string): Promise<string | null> {
+	try {
+		// Fetch the image
+		let imageBlob: Blob;
+		try {
+			const response = await fetch(imageUrl);
+			if (!response.ok) {
+				throw new Error('Failed to fetch image');
+			}
+			imageBlob = await response.blob();
+		} catch {
+			// Try with CORS proxy
+			const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(imageUrl)}`;
+			const response = await fetch(proxyUrl);
+			if (!response.ok) {
+				throw new Error('Failed to fetch image via proxy');
+			}
+			imageBlob = await response.blob();
+		}
+
+		const contentType = imageBlob.type || 'image/jpeg';
+		const filename = generateFilename(imageUrl);
+
+		const blob = await put(filename, imageBlob, {
+			access: 'public',
+			contentType,
+		});
+
+		return blob.url;
+	} catch (error) {
+		console.error(`Failed to upload image ${imageUrl}:`, error);
+		return null;
+	}
+}
+
+function getDb() {
+	const url = process.env.DATABASE_URL;
+	if (!url) {
+		throw new Error('DATABASE_URL not configured');
+	}
+	const sql = neon(url);
+	return drizzle(sql);
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+	// Only allow POST to prevent accidental runs
+	if (req.method !== 'POST') {
+		return res.status(405).json({ error: 'Method not allowed. Use POST to run migration.' });
+	}
+
+	// Optional: Add a secret key for protection
+	const { secret, dryRun } = req.body || {};
+	const expectedSecret = process.env.MIGRATION_SECRET;
+
+	if (expectedSecret && secret !== expectedSecret) {
+		return res.status(401).json({ error: 'Invalid secret' });
+	}
+
+	const token = process.env.BLOB_READ_WRITE_TOKEN;
+	if (!token) {
+		return res.status(500).json({ error: 'Blob storage not configured' });
+	}
+
+	try {
+		const db = getDb();
+
+		// Get all pieces that need migration
+		const piecesToMigrate = await db
+			.select({
+				id: pieces.id,
+				name: pieces.name,
+				originalImageUrl: pieces.originalImageUrl,
+			})
+			.from(pieces)
+			.where(
+				and(
+					isNull(pieces.persistedImageUrl),
+					isNotNull(pieces.originalImageUrl)
+				)
+			);
+
+		if (dryRun) {
+			return res.json({
+				dryRun: true,
+				piecesToMigrate: piecesToMigrate.length,
+				pieces: piecesToMigrate.map(p => ({ id: p.id, name: p.name })),
+			});
+		}
+
+		const results: Array<{
+			id: number;
+			name: string;
+			success: boolean;
+			persistedUrl?: string;
+			error?: string;
+		}> = [];
+
+		for (const piece of piecesToMigrate) {
+			if (!piece.originalImageUrl) continue;
+
+			const persistedUrl = await uploadImageToBlob(piece.originalImageUrl);
+
+			if (persistedUrl) {
+				// Update the piece with the new URL
+				await db
+					.update(pieces)
+					.set({ persistedImageUrl: persistedUrl })
+					.where(eq(pieces.id, piece.id));
+
+				results.push({
+					id: piece.id,
+					name: piece.name,
+					success: true,
+					persistedUrl,
+				});
+			} else {
+				results.push({
+					id: piece.id,
+					name: piece.name,
+					success: false,
+					error: 'Failed to upload image',
+				});
+			}
+		}
+
+		const successful = results.filter(r => r.success).length;
+		const failed = results.filter(r => !r.success).length;
+
+		return res.json({
+			message: 'Migration complete',
+			total: piecesToMigrate.length,
+			successful,
+			failed,
+			results,
+		});
+	} catch (error) {
+		console.error('Migration error:', error);
+		return res.status(500).json({
+			error: error instanceof Error ? error.message : 'Unknown error',
+		});
+	}
+}

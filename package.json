@@ -23,6 +23,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:vercel": "npm run db:migrate && tsc && vite build",
+    "db:migrate": "npx tsx src/db/migrate.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
     "preview": "vite preview"
   },
   "devDependencies": {
@@ -34,6 +38,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.8",
+    "tsx": "^4.21.0",
     "typescript": "^5.6.3",
     "vite": "^6.0.7"
   }
