@@ -1,29 +1,9 @@
-import { GoogleGenAI, ToolListUnion } from '@google/genai';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-const MODEL = 'gemini-3-flash-preview';
-
-let client: GoogleGenAI | null = null;
-
-/**
- * Get or create the Gemini client singleton
- */
-function getClient(): GoogleGenAI {
-	if (!client) {
-		const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-		if (!apiKey) {
-			throw new Error(
-				'Gemini API key not found. Please set GEMINI_API_KEY in your .env file.',
-			);
-		}
-		client = new GoogleGenAI({ apiKey });
-	}
-	return client;
-}
-
 /**
  * Generate structured JSON output with Zod schema validation
+ * Calls the serverless API route to keep API key secure
  */
 export async function generateStructured<T>({
 	systemInstruction,
@@ -36,11 +16,14 @@ export async function generateStructured<T>({
 	systemInstruction?: string;
 	prompt: string;
 	schema: z.ZodSchema<T>;
-	options?: { temperature?: number; tools?: ToolListUnion; maxTokens?: number };
+	options?: {
+		temperature?: number;
+		tools?: Array<{ urlContext?: object } | { googleSearch?: object }>;
+		maxTokens?: number;
+	};
 	model?: string;
 	signal?: AbortSignal;
 }): Promise<T> {
-	// Check if already aborted before making the request
 	if (signal?.aborted) {
 		throw new DOMException('Aborted', 'AbortError');
 	}
@@ -48,43 +31,34 @@ export async function generateStructured<T>({
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const jsonSchema = zodToJsonSchema(schema as any) as object;
 
-	console.log({ jsonSchema });
-
-	// Create a promise that rejects when the signal is aborted
-	const abortPromise = signal
-		? new Promise<never>((_, reject) => {
-				signal.addEventListener('abort', () => {
-					reject(new DOMException('Aborted', 'AbortError'));
-				});
-		  })
-		: null;
-
-	const config = {
-		temperature: options?.temperature ?? 0.7,
-		tools: options?.tools ?? [],
-		responseMimeType: 'application/json',
-		systemInstruction: systemInstruction,
-		responseJsonSchema: jsonSchema,
-		maxOutputTokens: options?.maxTokens ?? 20048,
-	};
-
-	console.log({ config });
-
-	const requestPromise = getClient().models.generateContent({
-		model: model ?? MODEL,
-		contents: prompt,
-		config,
+	const response = await fetch('/api/gemini', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			action: 'generateStructured',
+			prompt,
+			systemInstruction,
+			config: {
+				temperature: options?.temperature ?? 0.7,
+				tools: options?.tools ?? [],
+				jsonSchema,
+				maxTokens: options?.maxTokens ?? 20048,
+				model,
+			},
+		}),
+		signal,
 	});
 
-	// Race between the request and abort signal
-	const response = abortPromise
-		? await Promise.race([requestPromise, abortPromise])
-		: await requestPromise;
+	if (!response.ok) {
+		const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+		throw new Error(error.error || 'Gemini API request failed');
+	}
 
-	const text = response.text;
+	const { text } = await response.json();
 	if (!text) {
 		throw new Error('No response from Gemini');
 	}
+
 	return schema.parse(JSON.parse(text));
 }
 
@@ -95,40 +69,44 @@ export async function generateText(
 	prompt: string,
 	options?: { temperature?: number; maxTokens?: number }
 ): Promise<string> {
-	const response = await getClient().models.generateContent({
-		model: MODEL,
-		contents: prompt,
-		config: {
-			temperature: options?.temperature ?? 0.7,
-			maxOutputTokens: options?.maxTokens ?? 20048,
-		},
+	const response = await fetch('/api/gemini', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			action: 'generateText',
+			prompt,
+			config: {
+				temperature: options?.temperature ?? 0.7,
+				maxTokens: options?.maxTokens ?? 20048,
+			},
+		}),
 	});
-	const text = response.text;
+
+	if (!response.ok) {
+		const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+		throw new Error(error.error || 'Gemini API request failed');
+	}
+
+	const { text } = await response.json();
 	if (!text) {
 		throw new Error('No response from Gemini');
 	}
+
 	return text;
 }
 
 /**
  * Generate streaming text output
+ * Note: Streaming requires a different approach with server-sent events
+ * For now, this falls back to non-streaming
  */
 export async function* generateStream(
 	prompt: string,
 	options?: { temperature?: number }
 ): AsyncGenerator<string> {
-	const response = await getClient().models.generateContentStream({
-		model: MODEL,
-		contents: prompt,
-		config: {
-			temperature: options?.temperature ?? 0.7,
-		},
-	});
-	for await (const chunk of response) {
-		if (chunk.text) {
-			yield chunk.text;
-		}
-	}
+	// Fallback to non-streaming for simplicity
+	const text = await generateText(prompt, options);
+	yield text;
 }
 
 /**
@@ -140,38 +118,31 @@ export async function generateWithImage<T>(
 	mimeType: string,
 	schema?: z.ZodSchema<T>
 ): Promise<T extends undefined ? string : T> {
-	const config: {
-		temperature: number;
-		responseMimeType?: string;
-		responseSchema?: object;
-	} = { temperature: 0.1 };
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const jsonSchema = schema ? (zodToJsonSchema(schema as any) as object) : undefined;
 
-	if (schema) {
-		config.responseMimeType = 'application/json';
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		config.responseSchema = zodToJsonSchema(schema as any) as object;
-	}
-
-	const response = await getClient().models.generateContent({
-		model: MODEL,
-		contents: [
-			{
-				role: 'user',
-				parts: [
-					{ text: prompt },
-					{
-						inlineData: {
-							mimeType: mimeType,
-							data: imageBase64,
-						},
-					},
-				],
+	const response = await fetch('/api/gemini', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			action: 'generateWithImage',
+			prompt,
+			imageData: {
+				base64: imageBase64,
+				mimeType,
 			},
-		],
-		config,
+			config: {
+				jsonSchema,
+			},
+		}),
 	});
 
-	const text = response.text;
+	if (!response.ok) {
+		const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+		throw new Error(error.error || 'Gemini API request failed');
+	}
+
+	const { text } = await response.json();
 	if (!text) {
 		throw new Error('No response from Gemini');
 	}

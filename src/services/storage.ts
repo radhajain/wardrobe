@@ -1,18 +1,4 @@
-import { Outfit, Clothes, ClothesWithId } from '../types';
-import {
-	getDb,
-	pieces,
-	outfits,
-	Piece,
-	OutfitRecord,
-	OutfitItemJson,
-} from '../db';
-import { eq } from 'drizzle-orm';
-import {
-	uploadImageToBlob,
-	deleteImageFromBlob,
-	isBlobConfigured,
-} from './blobStorage';
+import { Outfit, Clothes, ClothesWithId, CropSettings, CanvasItemPosition } from '../types';
 
 /**
  * Current user ID (set after authentication)
@@ -34,18 +20,112 @@ export function getCurrentUser(): string | null {
 }
 
 /**
+ * Ensure user is authenticated before database operations
+ */
+function requireUser(): string {
+	if (!currentUserId) {
+		throw new Error('User not authenticated');
+	}
+	return currentUserId;
+}
+
+/**
+ * Helper to call the database API
+ */
+async function dbApi<T>(
+	action: string,
+	data?: object,
+	id?: string | number
+): Promise<T> {
+	const userId = requireUser();
+
+	const response = await fetch('/api/db', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ action, userId, data, id }),
+	});
+
+	if (!response.ok) {
+		const error = await response
+			.json()
+			.catch(() => ({ error: 'Unknown error' }));
+		throw new Error(error.error || 'Database API request failed');
+	}
+
+	return response.json();
+}
+
+/**
+ * Helper to call the blob API
+ */
+async function blobApi(
+	action: string,
+	data: { imageUrl?: string; base64Data?: string; url?: string }
+): Promise<{ url?: string; success?: boolean }> {
+	const method = action === 'delete' ? 'DELETE' : 'POST';
+
+	const response = await fetch('/api/blob', {
+		method,
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ action, ...data }),
+	});
+
+	if (!response.ok) {
+		const error = await response
+			.json()
+			.catch(() => ({ error: 'Unknown error' }));
+		throw new Error(error.error || 'Blob API request failed');
+	}
+
+	return response.json();
+}
+
+interface PieceRecord {
+	id: number;
+	userId: string;
+	name: string;
+	type: string;
+	color: string;
+	style: string;
+	designer: string;
+	productUrl: string | null;
+	originalImageUrl: string | null;
+	persistedImageUrl: string | null;
+	orderNumber: string | null;
+	orderDate: string | null;
+	orderRetailer: string | null;
+	createdAt: string | null;
+}
+
+interface OutfitRecord {
+	id: string;
+	userId: string;
+	name: string;
+	items: OutfitItemJson[];
+	createdAt: string | null;
+	updatedAt: string | null;
+}
+
+interface OutfitItemJson {
+	id: string;
+	pieceId: number;
+	position: CanvasItemPosition;
+	customImageUrl?: string;
+	crop?: CropSettings;
+}
+
+/**
  * Convert database piece to app Clothes type
  */
-function pieceToClothes(piece: Piece): ClothesWithId {
+function pieceToClothes(piece: PieceRecord): ClothesWithId {
 	return {
 		id: piece.id,
 		name: piece.name,
-		type: piece.type,
+		type: piece.type as ClothesWithId['type'],
 		color: piece.color,
 		style: piece.style,
 		designer: piece.designer,
 		productUrl: piece.productUrl ?? undefined,
-		// Prefer Blob URL, fall back to original
 		imageUrl: piece.persistedImageUrl ?? piece.originalImageUrl ?? undefined,
 		order:
 			piece.orderNumber || piece.orderDate
@@ -65,57 +145,39 @@ function outfitRecordToOutfit(record: OutfitRecord): Outfit {
 	return {
 		id: record.id,
 		name: record.name,
-		items: (record.items as OutfitItemJson[]).map((item) => ({
+		items: record.items.map((item) => ({
 			id: item.id,
 			clothesId: item.pieceId,
 			position: item.position,
 			customImageUrl: item.customImageUrl,
 			crop: item.crop,
 		})),
-		createdAt: record.createdAt?.toISOString() ?? new Date().toISOString(),
-		updatedAt: record.updatedAt?.toISOString() ?? new Date().toISOString(),
+		createdAt: record.createdAt ?? new Date().toISOString(),
+		updatedAt: record.updatedAt ?? new Date().toISOString(),
 	};
 }
 
 /**
- * Ensure user is authenticated before database operations
- */
-function requireUser(): string {
-	if (!currentUserId) {
-		throw new Error('User not authenticated');
-	}
-	return currentUserId;
-}
-
-/**
- * Storage service for wardrobe data using Neon database
+ * Storage service for wardrobe data using API routes
  */
 export const storage = {
 	// ============= Outfit Methods =============
 
 	async getOutfits(): Promise<Outfit[]> {
-		const userId = requireUser();
-		const db = getDb();
-		const records = await db
-			.select()
-			.from(outfits)
-			.where(eq(outfits.userId, userId));
-		return records.map(outfitRecordToOutfit);
+		const { outfits } = await dbApi<{ outfits: OutfitRecord[] }>('getOutfits');
+		return outfits.map(outfitRecordToOutfit);
 	},
 
 	async getOutfitById(id: string): Promise<Outfit | null> {
-		requireUser();
-		const db = getDb();
-		const [record] = await db
-			.select()
-			.from(outfits)
-			.where(eq(outfits.id, id));
-		return record ? outfitRecordToOutfit(record) : null;
+		const { outfit } = await dbApi<{ outfit: OutfitRecord | null }>(
+			'getOutfit',
+			undefined,
+			id
+		);
+		return outfit ? outfitRecordToOutfit(outfit) : null;
 	},
 
 	async saveOutfit(outfit: Outfit): Promise<Outfit> {
-		const userId = requireUser();
-		const db = getDb();
 		const items: OutfitItemJson[] = outfit.items.map((item) => ({
 			id: item.id,
 			pieceId: item.clothesId,
@@ -124,187 +186,131 @@ export const storage = {
 			crop: item.crop,
 		}));
 
-		// Check if outfit exists
-		const [existing] = await db
-			.select()
-			.from(outfits)
-			.where(eq(outfits.id, outfit.id));
-
-		if (existing) {
-			await db
-				.update(outfits)
-				.set({
-					name: outfit.name,
-					items,
-					updatedAt: new Date(),
-				})
-				.where(eq(outfits.id, outfit.id));
-		} else {
-			await db.insert(outfits).values({
-				id: outfit.id,
-				userId,
-				name: outfit.name,
-				items,
-			});
-		}
+		await dbApi('saveOutfit', {
+			id: outfit.id,
+			name: outfit.name,
+			items,
+		});
 
 		return outfit;
 	},
 
 	async deleteOutfit(id: string): Promise<void> {
-		requireUser();
-		const db = getDb();
-		await db.delete(outfits).where(eq(outfits.id, id));
+		await dbApi('deleteOutfit', undefined, id);
 	},
 
 	// ============= Wardrobe Methods =============
 
 	async getWardrobe(): Promise<ClothesWithId[]> {
-		const userId = requireUser();
-		const db = getDb();
-		const records = await db
-			.select()
-			.from(pieces)
-			.where(eq(pieces.userId, userId));
-		return records.map(pieceToClothes);
+		const { pieces } = await dbApi<{ pieces: PieceRecord[] }>('getPieces');
+		return pieces.map(pieceToClothes);
 	},
 
 	async addClothingItem(item: Clothes): Promise<ClothesWithId> {
-		const userId = requireUser();
-		const db = getDb();
+		let persistedImageUrl: string | undefined;
 
-		let blobImageUrl: string | undefined;
-
-		// Upload to Vercel Blob if configured
-		if (item.imageUrl && isBlobConfigured()) {
+		// Upload to Vercel Blob via API if we have an image
+		if (item.imageUrl) {
 			try {
-				const result = await uploadImageToBlob(item.imageUrl);
-				blobImageUrl = result.url;
+				// Check if it's a base64 data URL (uploaded file)
+				if (item.imageUrl.startsWith('data:')) {
+					const result = await blobApi('uploadBase64', {
+						base64Data: item.imageUrl,
+					});
+					persistedImageUrl = result.url;
+				} else {
+					const result = await blobApi('uploadFromUrl', {
+						imageUrl: item.imageUrl,
+					});
+					persistedImageUrl = result.url;
+				}
 			} catch (error) {
 				console.warn('Failed to upload image to Vercel Blob:', error);
 			}
 		}
 
-		const [inserted] = await db
-			.insert(pieces)
-			.values({
-				userId,
-				name: item.name,
-				type: item.type,
-				color: item.color,
-				style: item.style,
-				designer: item.designer,
-				productUrl: item.productUrl,
-				originalImageUrl: item.imageUrl,
-				persistedImageUrl: blobImageUrl,
-				orderNumber: item.order?.orderNumber ?? null,
-				orderDate: item.order?.orderDate ?? null,
-				orderRetailer: item.order?.retailer ?? null,
-			})
-			.returning();
+		const { piece } = await dbApi<{ piece: PieceRecord }>('addPiece', {
+			...item,
+			persistedImageUrl,
+		});
 
-		return pieceToClothes(inserted);
+		return pieceToClothes(piece);
 	},
 
 	async updateClothingItem(id: number, item: Clothes): Promise<ClothesWithId> {
-		requireUser();
-		const db = getDb();
+		// Get existing piece to check if image changed
+		const { piece: existing } = await dbApi<{ piece: PieceRecord | null }>(
+			'getPiece',
+			undefined,
+			id
+		);
 
-		// Check if image changed
-		const [existing] = await db
-			.select()
-			.from(pieces)
-			.where(eq(pieces.id, id));
+		let persistedImageUrl = existing?.persistedImageUrl;
 
-		let blobImageUrl = existing?.persistedImageUrl;
-
-		// If image URL changed, upload new one to Vercel Blob
+		// If image URL changed, upload new one
 		if (item.imageUrl && item.imageUrl !== existing?.originalImageUrl) {
-			if (isBlobConfigured()) {
-				// Delete old Blob image if exists
-				if (existing?.persistedImageUrl) {
-					try {
-						await deleteImageFromBlob(existing.persistedImageUrl);
-					} catch (error) {
-						console.warn('Failed to delete old Blob image:', error);
-					}
-				}
-
-				// Upload new image
+			// Delete old Blob image if exists
+			if (existing?.persistedImageUrl) {
 				try {
-					const result = await uploadImageToBlob(item.imageUrl);
-					blobImageUrl = result.url;
+					await blobApi('delete', { url: existing.persistedImageUrl });
 				} catch (error) {
-					console.warn('Failed to upload new image to Vercel Blob:', error);
+					console.warn('Failed to delete old Blob image:', error);
 				}
+			}
+
+			// Upload new image
+			try {
+				if (item.imageUrl.startsWith('data:')) {
+					const result = await blobApi('uploadBase64', {
+						base64Data: item.imageUrl,
+					});
+					persistedImageUrl = result.url;
+				} else {
+					const result = await blobApi('uploadFromUrl', {
+						imageUrl: item.imageUrl,
+					});
+					persistedImageUrl = result.url;
+				}
+			} catch (error) {
+				console.warn('Failed to upload new image to Vercel Blob:', error);
+				persistedImageUrl = undefined;
 			}
 		}
 
-		const [updated] = await db
-			.update(pieces)
-			.set({
-				name: item.name,
-				type: item.type,
-				color: item.color,
-				style: item.style,
-				designer: item.designer,
-				productUrl: item.productUrl,
-				originalImageUrl: item.imageUrl,
-				persistedImageUrl: blobImageUrl,
-				orderNumber: item.order?.orderNumber ?? null,
-				orderDate: item.order?.orderDate ?? null,
-				orderRetailer: item.order?.retailer ?? null,
-			})
-			.where(eq(pieces.id, id))
-			.returning();
+		const { piece } = await dbApi<{ piece: PieceRecord }>(
+			'updatePiece',
+			{
+				...item,
+				persistedImageUrl,
+			},
+			id
+		);
 
-		return pieceToClothes(updated);
+		return pieceToClothes(piece);
 	},
 
 	async deleteClothingItem(id: number): Promise<void> {
-		const userId = requireUser();
-		const db = getDb();
+		const { deletedBlobUrl } = await dbApi<{
+			success: boolean;
+			deletedBlobUrl?: string;
+		}>('deletePiece', undefined, id);
 
-		// Get piece to delete Blob image
-		const [piece] = await db.select().from(pieces).where(eq(pieces.id, id));
-
-		if (piece?.persistedImageUrl && isBlobConfigured()) {
+		// Delete blob image if it existed
+		if (deletedBlobUrl) {
 			try {
-				await deleteImageFromBlob(piece.persistedImageUrl);
+				await blobApi('delete', { url: deletedBlobUrl });
 			} catch (error) {
 				console.warn('Failed to delete Blob image:', error);
 			}
 		}
-
-		// Delete from database
-		await db.delete(pieces).where(eq(pieces.id, id));
-
-		// Update outfits that contain this piece
-		const userOutfits = await db
-			.select()
-			.from(outfits)
-			.where(eq(outfits.userId, userId));
-
-		for (const outfit of userOutfits) {
-			const items = (outfit.items as OutfitItemJson[]).filter(
-				(item) => item.pieceId !== id,
-			);
-			if (items.length !== (outfit.items as OutfitItemJson[]).length) {
-				await db
-					.update(outfits)
-					.set({ items, updatedAt: new Date() })
-					.where(eq(outfits.id, outfit.id));
-			}
-		}
 	},
 
-	/**
-	 * Get a single clothing item by ID
-	 */
 	async getClothingItem(id: number): Promise<ClothesWithId | null> {
-		requireUser();
-		const db = getDb();
-		const [piece] = await db.select().from(pieces).where(eq(pieces.id, id));
+		const { piece } = await dbApi<{ piece: PieceRecord | null }>(
+			'getPiece',
+			undefined,
+			id
+		);
 		return piece ? pieceToClothes(piece) : null;
 	},
 };

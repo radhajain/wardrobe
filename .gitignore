@@ -25,3 +25,5 @@ yarn-error.log*
 
 # Data
 src/data/radha-full-wardrobe.ts
+.vercel
+.env*.local
