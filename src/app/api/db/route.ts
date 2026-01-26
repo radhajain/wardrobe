@@ -66,6 +66,15 @@ export async function POST(request: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    // Debug: Check if DATABASE_URL is available
+    if (!process.env.DATABASE_URL) {
+      console.error("DATABASE_URL is not set in environment");
+      return NextResponse.json(
+        { error: "Database not configured", debug: "DATABASE_URL missing" },
+        { status: 500 }
+      );
+    }
+
     const db = getDb();
 
     // User operations

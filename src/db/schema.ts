@@ -140,6 +140,23 @@ export const recommendationPreferences = pgTable("recommendation_preferences", {
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
+/**
+ * API keys for MCP authentication
+ * Keys are hashed with SHA256, only the prefix is stored for display
+ */
+export const apiKeys = pgTable("api_keys", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  keyHash: text("key_hash").notNull().unique(),
+  keyPrefix: text("key_prefix").notNull(), // First 8 chars for display (wdrb_abc123...)
+  name: text("name").notNull(), // User-friendly name
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  revokedAt: timestamp("revoked_at"), // NULL = active, set = revoked
+});
+
 // Type exports for use in application
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -149,3 +166,6 @@ export type NewPiece = typeof pieces.$inferInsert;
 
 export type OutfitRecord = typeof outfits.$inferSelect;
 export type NewOutfit = typeof outfits.$inferInsert;
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type NewApiKey = typeof apiKeys.$inferInsert;

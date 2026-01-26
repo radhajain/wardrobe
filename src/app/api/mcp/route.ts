@@ -2,17 +2,20 @@
  * MCP Server Route
  * Exposes wardrobe tools to Claude and other MCP-compatible clients
  *
- * Uses Edge Runtime for Web API compatibility with mcp-handler
+ * SECURED with API key authentication via withMcpAuth
+ * Users must generate an API key from Account settings
  */
 
 import { z } from "zod";
-import { createMcpHandler } from "mcp-handler";
+import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq } from "drizzle-orm";
 import { put } from "@vercel/blob";
 import { GoogleGenAI } from "@google/genai";
 import { zodToJsonSchema } from "zod-to-json-schema";
+import { validateApiKey } from "../../../lib/auth/validateApiKey";
+import { checkRateLimit, rateLimitHeaders } from "../../../lib/rateLimit";
 
 // Define schema inline (same as db.ts pattern)
 import { pgTable, serial, text, uuid, timestamp } from "drizzle-orm/pg-core";
@@ -131,18 +134,19 @@ const OutfitRecommendationSchema = z.object({
   stylingTips: z.string().optional(),
 });
 
+// Store for passing userId from auth to tools
+// Using a request-scoped approach via headers
+let currentAuthUserId: string | null = null;
+
 // Create the MCP handler
 const handler = createMcpHandler(
   (server) => {
     // Tool 1: Add piece to wardrobe
+    // NOTE: userId is now obtained from API key authentication, not from parameters
     server.tool(
       "addPieceToWardrobe",
-      "Add a new clothing piece to the wardrobe. Returns the created piece ID.",
+      "Add a new clothing piece to YOUR wardrobe. Returns the created piece ID.",
       {
-        userId: z
-          .string()
-          .uuid()
-          .describe("User UUID - required for all operations"),
         name: z.string().describe("Name of the clothing piece"),
         type: z.enum(ClothingTypes).describe("Type of clothing"),
         color: z.string().optional().describe("Primary color of the piece"),
@@ -154,7 +158,20 @@ const handler = createMcpHandler(
         imageUrl: z.string().url().optional().describe("URL to product image"),
         productUrl: z.string().url().optional().describe("URL to product page"),
       },
-      async ({ userId, imageUrl, productUrl, ...pieceData }) => {
+      async ({ imageUrl, productUrl, ...pieceData }) => {
+        // Get userId from auth context
+        const userId = currentAuthUserId;
+        if (!userId) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Authentication error: No user context. Please ensure your API key is valid.",
+              },
+            ],
+          };
+        }
+
         // Upload image if provided
         let persistedImageUrl: string | undefined;
         if (imageUrl) {
@@ -220,12 +237,8 @@ const handler = createMcpHandler(
     // Tool 2: Get outfit recommendation
     server.tool(
       "getOutfit",
-      "Get AI-powered outfit recommendations based on weather, occasion, and style preferences.",
+      "Get AI-powered outfit recommendations based on weather, occasion, and style preferences from YOUR wardrobe.",
       {
-        userId: z
-          .string()
-          .uuid()
-          .describe("User UUID - required for all operations"),
         weather: z
           .object({
             temperature: z.number().describe("Temperature in Fahrenheit"),
@@ -247,7 +260,20 @@ const handler = createMcpHandler(
           .optional()
           .describe('Style theme (e.g., "minimalist", "colorful", "edgy")'),
       },
-      async ({ userId, weather, event, theme }) => {
+      async ({ weather, event, theme }) => {
+        // Get userId from auth context
+        const userId = currentAuthUserId;
+        if (!userId) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Authentication error: No user context. Please ensure your API key is valid.",
+              },
+            ],
+          };
+        }
+
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
           return {
@@ -370,6 +396,69 @@ IMPORTANT: Only use piece IDs from the wardrobe above.`;
         }
       },
     );
+
+    // Tool 3: List wardrobe pieces
+    server.tool(
+      "listWardrobe",
+      "List all pieces in YOUR wardrobe, optionally filtered by type.",
+      {
+        type: z
+          .enum(ClothingTypes)
+          .optional()
+          .describe("Filter by clothing type"),
+      },
+      async ({ type }) => {
+        const userId = currentAuthUserId;
+        if (!userId) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Authentication error: No user context.",
+              },
+            ],
+          };
+        }
+
+        const db = getDb();
+        const userPieces = await db
+          .select()
+          .from(pieces)
+          .where(eq(pieces.userId, userId));
+        const filtered = type
+          ? userPieces.filter((p) => p.type === type)
+          : userPieces;
+
+        if (filtered.length === 0) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: type
+                  ? `No ${type} pieces in your wardrobe.`
+                  : "Your wardrobe is empty.",
+              },
+            ],
+          };
+        }
+
+        const list = filtered
+          .map(
+            (p) =>
+              `- [ID:${p.id}] ${p.name} (${p.type})${p.designer ? ` by ${p.designer}` : ""}`,
+          )
+          .join("\n");
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `**Your Wardrobe${type ? ` - ${type}` : ""}** (${filtered.length} pieces):\n\n${list}`,
+            },
+          ],
+        };
+      },
+    );
   },
   {
     serverInfo: {
@@ -383,8 +472,75 @@ IMPORTANT: Only use piece IDs from the wardrobe above.`;
   },
 );
 
-// Export for Next.js (using Node.js runtime for compatibility with drizzle/neon)
-// Note: Edge Runtime removed due to node:crypto dependency
+// Wrap handler with authentication
+const authHandler = withMcpAuth(
+  async (request: Request) => {
+    // The userId was set by validateApiKey and stored
+    return handler(request);
+  },
+  async (request: Request, bearerToken?: string) => {
+    const authInfo = await validateApiKey(request, bearerToken);
+    if (authInfo?.extra?.userId) {
+      // Store userId for tool access
+      currentAuthUserId = authInfo.extra.userId as string;
+    } else {
+      currentAuthUserId = null;
+    }
+    return authInfo;
+  },
+  {
+    required: true,
+    requiredScopes: ["wardrobe:read"],
+  },
+);
 
-export const GET = handler;
-export const POST = handler;
+// Add rate limiting wrapper
+async function rateLimitedHandler(request: Request) {
+  // Rate limit by API key (from Authorization header) or IP
+  const authHeader = request.headers.get("Authorization") || "";
+  const rateLimitKey = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7, 27) // Use first 20 chars of token as key
+    : request.headers.get("x-forwarded-for") || "anonymous";
+
+  // 60 requests per minute per key
+  const rateLimit = checkRateLimit(rateLimitKey, 60, 60000);
+
+  if (!rateLimit.allowed) {
+    return new Response(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        error: {
+          code: -32000,
+          message: "Rate limit exceeded. Please try again later.",
+        },
+        id: null,
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          ...rateLimitHeaders(rateLimit),
+        },
+      },
+    );
+  }
+
+  // Proceed with auth handler
+  const response = await authHandler(request);
+
+  // Add rate limit headers to response
+  const newHeaders = new Headers(response.headers);
+  Object.entries(rateLimitHeaders(rateLimit)).forEach(([key, value]) => {
+    newHeaders.set(key, value);
+  });
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders,
+  });
+}
+
+// Export for Next.js
+export const GET = rateLimitedHandler;
+export const POST = rateLimitedHandler;

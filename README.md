@@ -20,10 +20,9 @@ A personal wardrobe management app for cataloging your clothes and creating outf
 ## Tech Stack
 
 - **Framework:** Next.js 15 (App Router)
-- **Frontend:** React 19 + React Router v7
 - **Database:** Neon PostgreSQL + Drizzle ORM
 - **Auth:** Neon Auth
-- **Storage:** Vercel Blob
+- **Storage:** Vercel Blob (for images of clothes)
 - **AI:** Google Gemini
 - **Deployment:** Vercel
 
@@ -85,3 +84,53 @@ A personal wardrobe management app for cataloging your clothes and creating outf
 - `npm run db:push` - Push schema changes to database
 - `npm run db:generate` - Generate migration files
 - `npm run db:migrate` - Run database migrations
+
+## MCP Integration
+
+The app includes an MCP server to allow AI assistants to interact with your wardrobe.
+
+### Available Tools
+
+- **listWardrobe** - List all pieces in your wardrobe, optionally filtered by type
+- **addPieceToWardrobe** - Add a new clothing piece with image upload support
+- **getOutfit** - Get AI-powered outfit recommendations based on weather, occasion, and style
+
+### Setting Up MCP with Claude Desktop
+
+1. **Generate an API Key**
+   - Sign in to the wardrobe app
+   - Go to Account → API Keys
+   - Create a new key and copy it (you'll only see it once!)
+
+2. **Configure Claude Desktop**
+
+   Add this to your Claude Desktop config file:
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+   ```json
+   {
+     "mcpServers": {
+       "wardrobe": {
+         "url": "https://your-app.vercel.app/api/mcp",
+         "headers": {
+           "Authorization": "Bearer wdrb_live_your_key_here"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Use it!**
+
+   Ask Claude things like:
+   - "What's in my wardrobe?"
+   - "Add this jacket to my wardrobe: [paste product URL]"
+   - "What should I wear today? It's 65°F and sunny, I have a casual brunch."
+
+### Security
+
+- API keys are hashed with SHA256 before storage
+- Each key is tied to a specific user account
+- Rate limiting: 60 requests per minute per key
+- Keys can be revoked anytime from Account settings
