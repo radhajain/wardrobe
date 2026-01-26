@@ -22,6 +22,7 @@ import { checkRateLimit, rateLimitHeaders } from "../../../lib/rateLimit";
 
 // Define schema inline (same as db.ts pattern)
 import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { NextResponse } from "next/server";
 
 const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -549,40 +550,38 @@ const authHandler = withMcpAuth(
 
 // Add rate limiting wrapper
 async function rateLimitedHandler(request: Request) {
-  // Rate limit by API key (from Authorization header) or IP
+  // ... rate limiting logic ...
   const authHeader = request.headers.get("Authorization") || "";
   const rateLimitKey = authHeader.startsWith("Bearer ")
-    ? authHeader.slice(7, 27) // Use first 20 chars of token as key
+    ? authHeader.slice(7, 27)
     : request.headers.get("x-forwarded-for") || "anonymous";
 
-  // 60 requests per minute per key
   const rateLimit = checkRateLimit(rateLimitKey, 60, 60000);
 
   if (!rateLimit.allowed) {
     return new Response(
       JSON.stringify({
         jsonrpc: "2.0",
-        error: {
-          code: -32000,
-          message: "Rate limit exceeded. Please try again later.",
-        },
+        error: { code: -32000, message: "Rate limit exceeded." },
         id: null,
       }),
-      {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-          ...rateLimitHeaders(rateLimit),
-        },
-      },
+      { status: 429, headers: { "Content-Type": "application/json", ...rateLimitHeaders(rateLimit) } }
     );
   }
 
-  // Proceed with auth handler
+  // CRITICAL FIX: The authHandler might return undefined if auth fails.
   const response = await authHandler(request);
 
-  // Add rate limit headers to response
-  const newHeaders = new Headers(response.headers);
+  if (!response) {
+    // Return an explicit 401 Unauthorized if the handler falls through
+    return new Response(
+      JSON.stringify({ error: "Unauthorized or Invalid Request" }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Ensure response.headers exists before spreading
+  const newHeaders = new Headers(response.headers || {});
   Object.entries(rateLimitHeaders(rateLimit)).forEach(([key, value]) => {
     newHeaders.set(key, value);
   });
@@ -594,6 +593,6 @@ async function rateLimitedHandler(request: Request) {
   });
 }
 
-// Export for Next.js
-export const GET = rateLimitedHandler;
-export const POST = rateLimitedHandler;
+// Ensure explicit exports
+export const GET = (req: Request) => rateLimitedHandler(req);
+export const POST = (req: Request) => rateLimitedHandler(req);
