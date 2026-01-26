@@ -9,6 +9,7 @@
     "@neondatabase/serverless": "^1.0.2",
     "@vercel/blob": "^2.0.1",
     "drizzle-orm": "^0.45.1",
+    "mcp-handler": "^1.0.7",
     "prettier": "^3.8.1",
     "react": "^19.2.3",
     "react-dnd": "^16.0.1",
