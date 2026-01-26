@@ -19,13 +19,13 @@ import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq, isNull, isNotNull, and, inArray } from "drizzle-orm";
-import { pgTable, serial, text, uuid, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { put } from "@vercel/blob";
 
 // Define pieces schema inline
 const pieces = pgTable("pieces", {
   id: serial("id").primaryKey(),
-  userId: uuid("user_id").notNull(),
+  userId: text("user_id").notNull(),
   name: text("name").notNull(),
   type: text("type").notNull(),
   color: text("color").notNull().default(""),

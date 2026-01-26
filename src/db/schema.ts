@@ -10,10 +10,10 @@ import { CanvasItemPosition, ClothingType, CropSettings } from "../types";
 
 /**
  * Users table - stores user profile data
- * The id should match neon_auth.user(id) when a user signs up
+ * The id matches the Clerk user ID (format: user_xxx)
  */
 export const users = pgTable("users", {
-  id: uuid("id").primaryKey(),
+  id: text("id").primaryKey(),
   email: text("email").unique().notNull(),
   name: text("name"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -25,7 +25,7 @@ export const users = pgTable("users", {
  */
 export const pieces = pgTable("pieces", {
   id: serial("id").primaryKey(),
-  userId: uuid("user_id")
+  userId: text("user_id")
     .references(() => users.id)
     .notNull(),
   name: text("name").notNull(),
@@ -61,7 +61,7 @@ export interface OutfitItemJson {
  */
 export const outfits = pgTable("outfits", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
+  userId: text("user_id")
     .references(() => users.id)
     .notNull(),
   name: text("name").notNull(),
@@ -75,7 +75,7 @@ export const outfits = pgTable("outfits", {
  */
 export const chatMessages = pgTable("chat_messages", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
+  userId: text("user_id")
     .references(() => users.id)
     .notNull(),
   role: text("role").$type<"user" | "assistant">().notNull(),
@@ -90,7 +90,7 @@ export const chatMessages = pgTable("chat_messages", {
  */
 export const userReflections = pgTable("user_reflections", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
+  userId: text("user_id")
     .references(() => users.id)
     .notNull()
     .unique(),
@@ -105,7 +105,7 @@ export const userReflections = pgTable("user_reflections", {
  */
 export const assessmentResponses = pgTable("assessment_responses", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
+  userId: text("user_id")
     .references(() => users.id)
     .notNull()
     .unique(),
@@ -119,7 +119,7 @@ export const assessmentResponses = pgTable("assessment_responses", {
  */
 export const recommendationPreferences = pgTable("recommendation_preferences", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
+  userId: text("user_id")
     .references(() => users.id)
     .notNull()
     .unique(),
@@ -146,7 +146,7 @@ export const recommendationPreferences = pgTable("recommendation_preferences", {
  */
 export const apiKeys = pgTable("api_keys", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
+  userId: text("user_id")
     .references(() => users.id, { onDelete: "cascade" })
     .notNull(),
   keyHash: text("key_hash").notNull().unique(),

@@ -13,7 +13,7 @@ import {
 
 // Define schema inline for the API route
 const users = pgTable("users", {
-  id: uuid("id").primaryKey(),
+  id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
   name: text("name"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -21,7 +21,7 @@ const users = pgTable("users", {
 
 const pieces = pgTable("pieces", {
   id: serial("id").primaryKey(),
-  userId: uuid("user_id")
+  userId: text("user_id")
     .references(() => users.id)
     .notNull(),
   name: text("name").notNull(),
@@ -40,7 +40,7 @@ const pieces = pgTable("pieces", {
 
 const outfits = pgTable("outfits", {
   id: uuid("id").primaryKey(),
-  userId: uuid("user_id")
+  userId: text("user_id")
     .references(() => users.id)
     .notNull(),
   name: text("name").notNull(),

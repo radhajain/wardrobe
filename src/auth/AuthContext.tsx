@@ -1,6 +1,12 @@
-import { createContext, ReactNode, useContext, useMemo, useRef } from "react";
-import { useAuthenticate } from "@neondatabase/neon-js/auth/react";
-import { authClient } from "./client";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useMemo,
+  useRef,
+  useEffect,
+} from "react";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { ensureUserExists } from "../services/userSync";
 import { setCurrentUser } from "../services/storage";
 
@@ -29,42 +35,49 @@ const AuthContext = createContext<AuthContextType | null>(null);
  * Auth provider component
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { data, isPending } = useAuthenticate();
+  const { user: clerkUser, isLoaded } = useUser();
+  const { signOut: clerkSignOut } = useClerk();
   const syncedUserIdRef = useRef<string | null>(null);
 
   const user: User | null = useMemo(() => {
-    if (!data?.user) return null;
+    if (!clerkUser) return null;
     return {
-      id: data.user.id,
-      email: data.user.email,
-      name: data.user.name ?? undefined,
+      id: clerkUser.id,
+      email: clerkUser.primaryEmailAddress?.emailAddress || "",
+      name: clerkUser.fullName ?? undefined,
     };
-  }, [data?.user?.id, data?.user?.email, data?.user?.name]);
+  }, [
+    clerkUser?.id,
+    clerkUser?.primaryEmailAddress?.emailAddress,
+    clerkUser?.fullName,
+  ]);
 
-  // Sync user to our database and set current user for storage when they sign in
-  if (user && syncedUserIdRef.current !== user.id) {
-    syncedUserIdRef.current = user.id;
-    setCurrentUser(user.id);
-    ensureUserExists(user).catch(console.error);
-  }
+  // Sync user to our database when they sign in
+  useEffect(() => {
+    if (user && syncedUserIdRef.current !== user.id) {
+      syncedUserIdRef.current = user.id;
+      setCurrentUser(user.id);
+      ensureUserExists(user).catch(console.error);
+    }
 
-  // Clear current user when signed out
-  if (!user && syncedUserIdRef.current !== null) {
-    syncedUserIdRef.current = null;
-    setCurrentUser(null);
-  }
+    // Clear current user when signed out
+    if (!user && syncedUserIdRef.current !== null) {
+      syncedUserIdRef.current = null;
+      setCurrentUser(null);
+    }
+  }, [user]);
 
   const handleSignOut = async () => {
     syncedUserIdRef.current = null;
     setCurrentUser(null);
-    await authClient.signOut();
+    await clerkSignOut();
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isLoading: isPending,
+        isLoading: !isLoaded,
         isAuthenticated: !!user,
         signOut: handleSignOut,
       }}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useAuthenticate } from "@neondatabase/neon-js/auth/react";
+import { useUser } from "@clerk/nextjs";
 import { storage, setCurrentUser, getCurrentUser } from "../services/storage";
 import { Outfit } from "../types";
 
@@ -8,8 +8,8 @@ import { Outfit } from "../types";
  * Outfits are stored in the database and loaded when user is authenticated.
  */
 export const useOutfits = () => {
-  const { data } = useAuthenticate();
-  const user = data?.user;
+  const { user: clerkUser } = useUser();
+  const userId = clerkUser?.id ?? null;
   const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,8 +31,8 @@ export const useOutfits = () => {
 
   // Set current user and reload outfits when user changes
   useEffect(() => {
-    if (user) {
-      setCurrentUser(user.id);
+    if (userId) {
+      setCurrentUser(userId);
       setLoading(true);
       loadOutfits();
     } else {
@@ -40,7 +40,7 @@ export const useOutfits = () => {
       setOutfits([]);
       setLoading(false);
     }
-  }, [user, loadOutfits]);
+  }, [userId, loadOutfits]);
 
   const saveOutfit = useCallback(async (outfit: Outfit) => {
     const saved = await storage.saveOutfit(outfit);

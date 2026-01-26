@@ -1,14 +1,19 @@
-import { AuthView } from "@neondatabase/neon-js/auth/react";
-import { useParams } from "react-router-dom";
+import { SignIn } from "@clerk/nextjs";
 import "./LoginPage.css";
 
 export const LoginPage = () => {
-  const { pathname } = useParams();
   return (
     <div className="login-page">
-      <AuthView
-        pathname={pathname}
-        cardHeader={<h1 className="login-title">Wardrobe</h1>}
+      <h1 className="login-title">Wardrobe</h1>
+      <SignIn
+        appearance={{
+          elements: {
+            rootBox: "clerk-root",
+            card: "clerk-card",
+          },
+        }}
+        routing="hash"
+        fallbackRedirectUrl="/pieces"
       />
     </div>
   );

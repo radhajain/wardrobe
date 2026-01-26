@@ -8,7 +8,6 @@
     "@clerk/mcp-tools": "^0.3.1",
     "@clerk/nextjs": "^6.36.10",
     "@google/genai": "^1.37.0",
-    "@neondatabase/neon-js": "^0.1.0-beta.22",
     "@neondatabase/serverless": "^1.0.2",
     "@vercel/blob": "^2.0.1",
     "@vercel/mcp-adapter": "^1.0.0",

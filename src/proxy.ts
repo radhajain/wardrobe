@@ -1,3 +1,4 @@
+
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // Routes that should be publicly accessible (no auth required)

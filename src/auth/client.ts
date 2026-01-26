@@ -1,11 +1,7 @@
-import { createAuthClient } from "@neondatabase/neon-js/auth";
+/**
+ * Clerk Auth Client
+ * Re-exports Clerk hooks and utilities for use throughout the app
+ */
 
-const authUrl = process.env.NEXT_PUBLIC_NEON_AUTH_URL;
-
-if (!authUrl) {
-  console.error(
-    "NEXT_PUBLIC_NEON_AUTH_URL is not set. Please add it to your .env.local file.",
-  );
-}
-
-export const authClient = createAuthClient(authUrl || "");
+// Re-export from Clerk for convenience
+export { useAuth, useUser, useClerk } from "@clerk/nextjs";

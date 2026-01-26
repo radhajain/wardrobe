@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useAuthenticate } from "@neondatabase/neon-js/auth/react";
+import { useUser } from "@clerk/nextjs";
 import { storage, setCurrentUser, getCurrentUser } from "../services/storage";
 import { ClothesWithId, Clothes } from "../types";
 
@@ -8,8 +8,8 @@ import { ClothesWithId, Clothes } from "../types";
  * Items are stored in the database and loaded when user is authenticated.
  */
 export const useWardrobe = () => {
-  const { data } = useAuthenticate();
-  const user = data?.user;
+  const { user: clerkUser } = useUser();
+  const userId = clerkUser?.id ?? null;
   const [items, setItems] = useState<ClothesWithId[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,8 +31,8 @@ export const useWardrobe = () => {
 
   // Set current user and reload wardrobe when user changes
   useEffect(() => {
-    if (user) {
-      setCurrentUser(user.id);
+    if (userId) {
+      setCurrentUser(userId);
       setLoading(true);
       loadWardrobe();
     } else {
@@ -40,7 +40,7 @@ export const useWardrobe = () => {
       setItems([]);
       setLoading(false);
     }
-  }, [user, loadWardrobe]);
+  }, [userId, loadWardrobe]);
 
   const getItemById = useCallback(
     (id: number): ClothesWithId | undefined => {

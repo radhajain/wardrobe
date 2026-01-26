@@ -4,7 +4,6 @@
  *
  * SECURED with multiple authentication methods:
  * - OAuth via Clerk (for Claude Desktop)
- * - OAuth via Neon Auth (fallback)
  * - API keys (for programmatic access)
  */
 
@@ -16,23 +15,16 @@ import { eq } from "drizzle-orm";
 import { put } from "@vercel/blob";
 import { GoogleGenAI } from "@google/genai";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import * as jose from "jose";
 import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { verifyClerkToken } from "@clerk/mcp-tools/next";
 import { validateApiKey } from "../../../lib/auth/validateApiKey";
 import { checkRateLimit, rateLimitHeaders } from "../../../lib/rateLimit";
 
-// Create JWKS for Neon Auth JWT token validation (fallback)
-const neonAuthUrl = process.env.NEXT_PUBLIC_NEON_AUTH_URL;
-const JWKS = neonAuthUrl
-  ? jose.createRemoteJWKSet(new URL(`${neonAuthUrl}/.well-known/jwks.json`))
-  : null;
-
 // Define schema inline (same as db.ts pattern)
-import { pgTable, serial, text, uuid, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 const users = pgTable("users", {
-  id: uuid("id").primaryKey(),
+  id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
   name: text("name"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -40,7 +32,7 @@ const users = pgTable("users", {
 
 const pieces = pgTable("pieces", {
   id: serial("id").primaryKey(),
-  userId: uuid("user_id")
+  userId: text("user_id")
     .references(() => users.id)
     .notNull(),
   name: text("name").notNull(),
@@ -502,40 +494,8 @@ async function verifyClerkOAuthToken(
 }
 
 /**
- * Verify Neon Auth JWT tokens (fallback)
- */
-async function verifyNeonAuthJwt(
-  bearerToken: string
-): Promise<AuthInfo | undefined> {
-  if (!JWKS || !neonAuthUrl) {
-    return undefined;
-  }
-
-  try {
-    const { payload } = await jose.jwtVerify(bearerToken, JWKS, {
-      issuer: new URL(neonAuthUrl).origin,
-    });
-
-    if (!payload.sub) return undefined;
-
-    return {
-      token: bearerToken,
-      scopes: ["wardrobe:read", "wardrobe:write"],
-      clientId: "neon-auth",
-      extra: {
-        userId: payload.sub,
-        email: payload.email as string | undefined,
-      },
-    };
-  } catch (error) {
-    console.error("Neon Auth JWT verification failed:", error);
-    return undefined;
-  }
-}
-
-/**
  * Combined token verification
- * Supports Clerk OAuth, Neon Auth JWT, and API keys
+ * Supports Clerk OAuth and API keys
  */
 async function verifyToken(
   request: Request,
@@ -547,10 +507,6 @@ async function verifyToken(
   if (bearerToken.includes(".")) {
     const clerkResult = await verifyClerkOAuthToken(bearerToken);
     if (clerkResult) return clerkResult;
-
-    // Fall back to Neon Auth JWT
-    const neonResult = await verifyNeonAuthJwt(bearerToken);
-    if (neonResult) return neonResult;
   }
 
   // Fall back to API key validation for programmatic access

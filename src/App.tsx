@@ -1,4 +1,4 @@
-import { RedirectToSignIn, SignedIn } from "@neondatabase/neon-js/auth/react";
+import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/nextjs";
 import { Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
 import { Layout } from "./components/layout/Layout";
@@ -20,7 +20,9 @@ function Home() {
       <SignedIn>
         <Navigate to="/pieces" replace />
       </SignedIn>
-      <RedirectToSignIn />
+      <SignedOut>
+        <RedirectToSignIn />
+      </SignedOut>
     </>
   );
 }
@@ -31,7 +33,9 @@ function ProtectedPage({ children }: { children: React.ReactNode }) {
       <SignedIn>
         <Layout>{children}</Layout>
       </SignedIn>
-      <RedirectToSignIn />
+      <SignedOut>
+        <RedirectToSignIn />
+      </SignedOut>
     </>
   );
 }

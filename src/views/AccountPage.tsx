@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useAuthenticate } from "@neondatabase/neon-js/auth/react";
-import { authClient } from "../auth/client";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { setCurrentUser } from "../services/storage";
 import "./AccountPage.css";
 
@@ -17,9 +16,18 @@ interface NewKeyResponse {
 }
 
 export const AccountPage = () => {
-  const { data } = useAuthenticate();
-  const user = data?.user;
+  const { user: clerkUser, isLoaded } = useUser();
+  const { signOut } = useClerk();
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  // Map Clerk user to our user shape
+  const user = clerkUser
+    ? {
+        id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress || "",
+        name: clerkUser.fullName || clerkUser.firstName || "",
+      }
+    : null;
 
   // API Keys state
   const [apiKeys, setApiKeys] = useState<ApiKeyDisplay[]>([]);
@@ -54,7 +62,7 @@ export const AccountPage = () => {
     setIsSigningOut(true);
     try {
       setCurrentUser(null);
-      await authClient.signOut();
+      await signOut();
     } catch (error) {
       console.error("Failed to sign out:", error);
       setIsSigningOut(false);
@@ -115,7 +123,7 @@ export const AccountPage = () => {
     });
   };
 
-  if (!user) return null;
+  if (!isLoaded || !user) return null;
 
   return (
     <div className="account-page">

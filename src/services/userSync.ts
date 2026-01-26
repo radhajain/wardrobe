@@ -9,7 +9,7 @@ interface AuthUser {
 
 /**
  * Ensures a user exists in our database
- * This syncs the Neon Auth user to our users table via API route
+ * This syncs the Clerk user to our users table via API route
  */
 export async function ensureUserExists(authUser: AuthUser): Promise<void> {
   const response = await fetch("/api/db", {

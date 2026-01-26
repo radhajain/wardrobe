@@ -1,9 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { NeonAuthUIProvider } from "@neondatabase/neon-js/auth/react";
-import "@neondatabase/neon-js/ui/css";
-import { authClient } from "../../auth/client";
+import { AuthProvider } from "../../auth";
 
 // Dynamically import the entire app with router to avoid SSR issues
 const AppWithRouter = dynamic(
@@ -25,8 +23,8 @@ const AppWithRouter = dynamic(
 
 export function ClientOnly() {
   return (
-    <NeonAuthUIProvider authClient={authClient}>
+    <AuthProvider>
       <AppWithRouter />
-    </NeonAuthUIProvider>
+    </AuthProvider>
   );
 }
