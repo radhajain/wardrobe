@@ -29,9 +29,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   try {
-    return await corsHandler(request);
+    return corsHandler();
   } catch (error) {
     console.error("CORS handler error:", error);
     return new NextResponse(null, { status: 204 });
