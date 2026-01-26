@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { eq } from 'drizzle-orm';
@@ -9,7 +10,6 @@ import {
 	timestamp,
 	jsonb,
 } from 'drizzle-orm/pg-core';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Define schema inline for the API route
 const users = pgTable('users', {
@@ -21,7 +21,9 @@ const users = pgTable('users', {
 
 const pieces = pgTable('pieces', {
 	id: serial('id').primaryKey(),
-	userId: uuid('user_id').references(() => users.id).notNull(),
+	userId: uuid('user_id')
+		.references(() => users.id)
+		.notNull(),
 	name: text('name').notNull(),
 	type: text('type').notNull(),
 	color: text('color').notNull().default(''),
@@ -38,7 +40,9 @@ const pieces = pgTable('pieces', {
 
 const outfits = pgTable('outfits', {
 	id: uuid('id').primaryKey(),
-	userId: uuid('user_id').references(() => users.id).notNull(),
+	userId: uuid('user_id')
+		.references(() => users.id)
+		.notNull(),
 	name: text('name').notNull(),
 	items: jsonb('items').notNull().default([]),
 	createdAt: timestamp('created_at').defaultNow(),
@@ -54,23 +58,22 @@ function getDb() {
 	return drizzle(sql, { schema: { users, pieces, outfits } });
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-	if (req.method !== 'POST') {
-		return res.status(405).send('Method not allowed');
-	}
-
+export async function POST(request: Request) {
 	try {
-		const { action, userId, data, id } = req.body;
+		const { action, userId, data, id } = await request.json();
 
 		if (!userId) {
-			return res.status(401).send('Unauthorized');
+			return new NextResponse('Unauthorized', { status: 401 });
 		}
 
 		const db = getDb();
 
 		// User operations
 		if (action === 'ensureUser') {
-			const [existing] = await db.select().from(users).where(eq(users.id, userId));
+			const [existing] = await db
+				.select()
+				.from(users)
+				.where(eq(users.id, userId));
 			if (!existing) {
 				await db.insert(users).values({
 					id: userId,
@@ -78,13 +81,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 					name: data.name,
 				});
 			}
-			return res.json({ success: true });
+			return NextResponse.json({ success: true });
 		}
 
 		// Piece operations
 		if (action === 'getPieces') {
-			const records = await db.select().from(pieces).where(eq(pieces.userId, userId));
-			return res.json({ pieces: records });
+			const records = await db
+				.select()
+				.from(pieces)
+				.where(eq(pieces.userId, userId));
+			return NextResponse.json({ pieces: records });
 		}
 
 		if (action === 'addPiece') {
@@ -105,7 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 					orderRetailer: data.order?.retailer ?? null,
 				})
 				.returning();
-			return res.json({ piece: inserted });
+			return NextResponse.json({ piece: inserted });
 		}
 
 		if (action === 'updatePiece') {
@@ -126,7 +132,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 				})
 				.where(eq(pieces.id, id))
 				.returning();
-			return res.json({ piece: updated });
+			return NextResponse.json({ piece: updated });
 		}
 
 		if (action === 'deletePiece') {
@@ -137,10 +143,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 			await db.delete(pieces).where(eq(pieces.id, id));
 
 			// Update outfits that contained this piece
-			const userOutfits = await db.select().from(outfits).where(eq(outfits.userId, userId));
+			const userOutfits = await db
+				.select()
+				.from(outfits)
+				.where(eq(outfits.userId, userId));
 			for (const outfit of userOutfits) {
-				const items = (outfit.items as any[]).filter((item) => item.pieceId !== id);
-				if (items.length !== (outfit.items as any[]).length) {
+				const items = (outfit.items as { pieceId: number }[]).filter(
+					(item) => item.pieceId !== id
+				);
+				if (items.length !== (outfit.items as { pieceId: number }[]).length) {
 					await db
 						.update(outfits)
 						.set({ items, updatedAt: new Date() })
@@ -148,27 +159,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 				}
 			}
 
-			return res.json({ success: true, deletedBlobUrl: piece?.persistedImageUrl });
+			return NextResponse.json({
+				success: true,
+				deletedBlobUrl: piece?.persistedImageUrl,
+			});
 		}
 
 		if (action === 'getPiece') {
 			const [piece] = await db.select().from(pieces).where(eq(pieces.id, id));
-			return res.json({ piece: piece || null });
+			return NextResponse.json({ piece: piece || null });
 		}
 
 		// Outfit operations
 		if (action === 'getOutfits') {
-			const records = await db.select().from(outfits).where(eq(outfits.userId, userId));
-			return res.json({ outfits: records });
+			const records = await db
+				.select()
+				.from(outfits)
+				.where(eq(outfits.userId, userId));
+			return NextResponse.json({ outfits: records });
 		}
 
 		if (action === 'getOutfit') {
-			const [record] = await db.select().from(outfits).where(eq(outfits.id, id));
-			return res.json({ outfit: record || null });
+			const [record] = await db
+				.select()
+				.from(outfits)
+				.where(eq(outfits.id, id));
+			return NextResponse.json({ outfit: record || null });
 		}
 
 		if (action === 'saveOutfit') {
-			const [existing] = await db.select().from(outfits).where(eq(outfits.id, data.id));
+			const [existing] = await db
+				.select()
+				.from(outfits)
+				.where(eq(outfits.id, data.id));
 
 			if (existing) {
 				await db
@@ -187,19 +210,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 					items: data.items,
 				});
 			}
-			return res.json({ success: true });
+			return NextResponse.json({ success: true });
 		}
 
 		if (action === 'deleteOutfit') {
 			await db.delete(outfits).where(eq(outfits.id, id));
-			return res.json({ success: true });
+			return NextResponse.json({ success: true });
 		}
 
-		return res.status(400).send('Invalid action');
+		return new NextResponse('Invalid action', { status: 400 });
 	} catch (error) {
 		console.error('Database API error:', error);
-		return res.status(500).json({
-			error: error instanceof Error ? error.message : 'Unknown error'
-		});
+		return NextResponse.json(
+			{ error: error instanceof Error ? error.message : 'Unknown error' },
+			{ status: 500 }
+		);
 	}
 }

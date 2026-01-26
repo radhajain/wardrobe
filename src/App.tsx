@@ -5,13 +5,13 @@ import {
 import { Navigate, Route, Routes } from 'react-router-dom';
 import './App.css';
 import { Layout } from './components/layout/Layout';
-import { BuilderPage } from './pages/BuilderPage';
-import { LoginPage } from './pages/LoginPage';
-import { OutfitsPage } from './pages/OutfitsPage';
-import { PiecesPage } from './pages/PiecesPage';
-import { RecommendedPage } from './pages/RecommendedPage';
-import { StylistPage } from './pages/StylistPage';
-import { AccountPage } from './pages/AccountPage';
+import { BuilderPage } from './views/BuilderPage';
+import { LoginPage } from './views/LoginPage';
+import { OutfitsPage } from './views/OutfitsPage';
+import { PiecesPage } from './views/PiecesPage';
+import { RecommendedPage } from './views/RecommendedPage';
+import { StylistPage } from './views/StylistPage';
+import { AccountPage } from './views/AccountPage';
 
 function Auth() {
 	

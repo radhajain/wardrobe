@@ -13,23 +13,13 @@
  *               If not provided, migrates all pieces where persisted_image_url is null.
  *   - force: (optional) If true, re-uploads images even if persisted_image_url already exists.
  *            Only applies when pieceIds is provided.
- *
- * Examples:
- *   // Dry run to see what would be migrated
- *   curl -X POST /api/migrate-images -d '{"dryRun": true}'
- *
- *   // Migrate all pieces without persisted images
- *   curl -X POST /api/migrate-images
- *
- *   // Re-migrate specific pieces (will overwrite existing persisted URLs)
- *   curl -X POST /api/migrate-images -d '{"pieceIds": [40, 42, 50, 57, 70], "force": true}'
  */
 
+import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { eq, isNull, isNotNull, and, inArray } from 'drizzle-orm';
 import { pgTable, serial, text, uuid, timestamp } from 'drizzle-orm/pg-core';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { put } from '@vercel/blob';
 
 // Define pieces schema inline
@@ -109,26 +99,26 @@ function getDb() {
 	return drizzle(sql);
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-	// Only allow POST to prevent accidental runs
-	if (req.method !== 'POST') {
-		return res.status(405).json({ error: 'Method not allowed. Use POST to run migration.' });
-	}
-
-	// Optional: Add a secret key for protection
-	const { secret, dryRun, pieceIds, force } = req.body || {};
-	const expectedSecret = process.env.MIGRATION_SECRET;
-
-	if (expectedSecret && secret !== expectedSecret) {
-		return res.status(401).json({ error: 'Invalid secret' });
-	}
-
-	const token = process.env.BLOB_READ_WRITE_TOKEN;
-	if (!token) {
-		return res.status(500).json({ error: 'Blob storage not configured' });
-	}
-
+export async function POST(request: Request) {
 	try {
+		const body = await request.json();
+		const { secret, dryRun, pieceIds, force } = body || {};
+
+		// Optional: Add a secret key for protection
+		const expectedSecret = process.env.MIGRATION_SECRET;
+
+		if (expectedSecret && secret !== expectedSecret) {
+			return NextResponse.json({ error: 'Invalid secret' }, { status: 401 });
+		}
+
+		const token = process.env.BLOB_READ_WRITE_TOKEN;
+		if (!token) {
+			return NextResponse.json(
+				{ error: 'Blob storage not configured' },
+				{ status: 500 }
+			);
+		}
+
 		const db = getDb();
 
 		// Get pieces to migrate based on parameters
@@ -145,10 +135,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 				})
 				.from(pieces)
 				.where(
-					and(
-						inArray(pieces.id, pieceIds),
-						isNotNull(pieces.originalImageUrl)
-					)
+					and(inArray(pieces.id, pieceIds), isNotNull(pieces.originalImageUrl))
 				);
 
 			const allPieces = await baseQuery;
@@ -175,10 +162,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 		}
 
 		if (dryRun) {
-			return res.json({
+			return NextResponse.json({
 				dryRun: true,
 				piecesToMigrate: piecesToMigrate.length,
-				pieces: piecesToMigrate.map(p => ({ id: p.id, name: p.name })),
+				pieces: piecesToMigrate.map((p) => ({ id: p.id, name: p.name })),
 			});
 		}
 
@@ -218,10 +205,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 			}
 		}
 
-		const successful = results.filter(r => r.success).length;
-		const failed = results.filter(r => !r.success).length;
+		const successful = results.filter((r) => r.success).length;
+		const failed = results.filter((r) => !r.success).length;
 
-		return res.json({
+		return NextResponse.json({
 			message: 'Migration complete',
 			total: piecesToMigrate.length,
 			successful,
@@ -230,8 +217,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 		});
 	} catch (error) {
 		console.error('Migration error:', error);
-		return res.status(500).json({
-			error: error instanceof Error ? error.message : 'Unknown error',
-		});
+		return NextResponse.json(
+			{ error: error instanceof Error ? error.message : 'Unknown error' },
+			{ status: 500 }
+		);
 	}
 }

@@ -1,4 +1,8 @@
 import { execSync } from 'child_process';
+import { config } from 'dotenv';
+
+// Load environment variables from .env.local
+config({ path: '.env.local' });
 
 async function runMigrations() {
 	const databaseUrl = process.env.DATABASE_URL;

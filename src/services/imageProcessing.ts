@@ -167,7 +167,9 @@ export async function removeBackground(imageUrl: string): Promise<string> {
 	const base64Data = imageBase64.split(',')[1];
 	const mimeType = imageBase64.split(';')[0].split(':')[1];
 
-	if (!import.meta.env.GEMINI_API_KEY) {
+	// Client-side code doesn't have access to server-side env vars
+	// Always use the simple fallback method on client (API key check happens server-side)
+	if (typeof window !== 'undefined') {
 		// Fall back to simple background removal without API
 		return removeBackgroundSimple(imageBase64);
 	}

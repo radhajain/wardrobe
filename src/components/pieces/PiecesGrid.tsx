@@ -2,6 +2,7 @@ import { useRef, useEffect, ReactNode } from 'react';
 import { ClothesWithId, ClothesId } from '../../types';
 import { PieceCard } from './PieceCard';
 import './PiecesGrid.css';
+import React from 'react';
 
 interface PiecesGridProps {
 	items: ClothesWithId[];
@@ -76,7 +77,7 @@ export const PiecesGrid = ({
 	return (
 		<div className="pieces-grid" ref={gridRef}>
 			{items.map((item, index) => (
-				<>
+				<React.Fragment key={item.id}>
 					<PieceCard
 						key={item.id}
 						piece={item}
@@ -92,7 +93,7 @@ export const PiecesGrid = ({
 							{detailPanel}
 						</div>
 					)}
-				</>
+				</React.Fragment>
 			))}
 		</div>
 	);

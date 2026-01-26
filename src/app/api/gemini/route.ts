@@ -1,20 +1,22 @@
+import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const MODEL = 'gemini-3-flash-preview';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-	if (req.method !== 'POST') {
-		return res.status(405).send('Method not allowed');
-	}
-
+export async function POST(request: Request) {
 	const apiKey = process.env.GEMINI_API_KEY;
 	if (!apiKey) {
-		return res.status(500).send('Gemini API key not configured');
+		return new NextResponse('Gemini API key not configured', { status: 500 });
 	}
 
 	try {
-		const { action, prompt, systemInstruction, config: reqConfig, imageData } = req.body;
+		const {
+			action,
+			prompt,
+			systemInstruction,
+			config: reqConfig,
+			imageData,
+		} = await request.json();
 
 		const client = new GoogleGenAI({ apiKey });
 
@@ -32,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 				},
 			});
 
-			return res.json({ text: response.text });
+			return NextResponse.json({ text: response.text });
 		}
 
 		if (action === 'generateText') {
@@ -45,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 				},
 			});
 
-			return res.json({ text: response.text });
+			return NextResponse.json({ text: response.text });
 		}
 
 		if (action === 'generateWithImage') {
@@ -79,14 +81,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 				config,
 			});
 
-			return res.json({ text: response.text });
+			return NextResponse.json({ text: response.text });
 		}
 
-		return res.status(400).send('Invalid action');
+		return new NextResponse('Invalid action', { status: 400 });
 	} catch (error) {
 		console.error('Gemini API error:', error);
-		return res.status(500).json({
-			error: error instanceof Error ? error.message : 'Unknown error'
-		});
+		return NextResponse.json(
+			{ error: error instanceof Error ? error.message : 'Unknown error' },
+			{ status: 500 }
+		);
 	}
 }

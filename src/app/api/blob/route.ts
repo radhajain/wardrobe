@@ -1,5 +1,5 @@
+import { NextResponse } from 'next/server';
 import { put, del } from '@vercel/blob';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 function generateFilename(originalUrl?: string): string {
 	const timestamp = Date.now();
@@ -16,29 +16,14 @@ function generateFilename(originalUrl?: string): string {
 	return `wardrobe/${timestamp}-${random}.${extension}`;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-	if (req.method !== 'POST' && req.method !== 'DELETE') {
-		return res.status(405).send('Method not allowed');
-	}
-
+export async function POST(request: Request) {
 	const token = process.env.BLOB_READ_WRITE_TOKEN;
 	if (!token) {
-		return res.status(500).send('Blob storage not configured');
+		return new NextResponse('Blob storage not configured', { status: 500 });
 	}
 
 	try {
-		const body = req.body;
-
-		if (req.method === 'DELETE') {
-			const { url } = body;
-			if (!url) {
-				return res.status(400).send('URL required');
-			}
-			await del(url);
-			return res.json({ success: true });
-		}
-
-		// POST - upload
+		const body = await request.json();
 		const { action, imageUrl, base64Data } = body;
 
 		if (action === 'uploadFromUrl') {
@@ -68,14 +53,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 				contentType,
 			});
 
-			return res.json({ url: blob.url });
+			return NextResponse.json({ url: blob.url });
 		}
 
 		if (action === 'uploadBase64') {
 			// Parse base64 data URL
 			const matches = base64Data.match(/^data:([^;]+);base64,(.+)$/);
 			if (!matches) {
-				return res.status(400).send('Invalid base64 data URL');
+				return new NextResponse('Invalid base64 data URL', { status: 400 });
 			}
 
 			const contentType = matches[1];
@@ -92,14 +77,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 				contentType,
 			});
 
-			return res.json({ url: blob.url });
+			return NextResponse.json({ url: blob.url });
 		}
 
-		return res.status(400).send('Invalid action');
+		return new NextResponse('Invalid action', { status: 400 });
 	} catch (error) {
 		console.error('Blob API error:', error);
-		return res.status(500).json({
-			error: error instanceof Error ? error.message : 'Unknown error'
-		});
+		return NextResponse.json(
+			{ error: error instanceof Error ? error.message : 'Unknown error' },
+			{ status: 500 }
+		);
+	}
+}
+
+export async function DELETE(request: Request) {
+	const token = process.env.BLOB_READ_WRITE_TOKEN;
+	if (!token) {
+		return new NextResponse('Blob storage not configured', { status: 500 });
+	}
+
+	try {
+		const body = await request.json();
+		const { url } = body;
+
+		if (!url) {
+			return new NextResponse('URL required', { status: 400 });
+		}
+
+		await del(url);
+		return NextResponse.json({ success: true });
+	} catch (error) {
+		console.error('Blob API error:', error);
+		return NextResponse.json(
+			{ error: error instanceof Error ? error.message : 'Unknown error' },
+			{ status: 500 }
+		);
 	}
 }

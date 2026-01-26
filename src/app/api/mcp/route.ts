@@ -2,7 +2,7 @@
  * MCP Server Route
  * Exposes wardrobe tools to Claude and other MCP-compatible clients
  *
- * Uses Vercel Edge Runtime for Web API compatibility with mcp-handler
+ * Uses Edge Runtime for Web API compatibility with mcp-handler
  */
 
 import { z } from 'zod';
@@ -343,9 +343,8 @@ IMPORTANT: Only use piece IDs from the wardrobe above.`;
 	}
 );
 
-// Export for Vercel Edge Runtime
-export const config = {
-	runtime: 'edge',
-};
+// Export for Next.js (using Node.js runtime for compatibility with drizzle/neon)
+// Note: Edge Runtime removed due to node:crypto dependency
 
-export default handler;
+export const GET = handler;
+export const POST = handler;
