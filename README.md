@@ -97,40 +97,35 @@ The app includes an MCP server to allow AI assistants to interact with your ward
 
 ### Setting Up MCP with Claude Desktop
 
-1. **Generate an API Key**
-   - Sign in to the wardrobe app
-   - Go to Account → API Keys
-   - Create a new key and copy it (you'll only see it once!)
+1. **Open Claude Desktop Settings**
+   - Go to **Settings > Connectors**
 
-2. **Configure Claude Desktop**
+2. **Add the Wardrobe Connector**
+   - Click "Add Connector"
+   - Enter URL: `https://wardrobe.radhajain.com/api/mcp`
 
-   Add this to your Claude Desktop config file:
-   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+3. **Sign in with Google**
+   - Claude will open a login window
+   - Sign in with the same Google account you use for the wardrobe app
 
-   ```json
-   {
-     "mcpServers": {
-       "wardrobe": {
-         "url": "https://your-app.vercel.app/api/mcp",
-         "headers": {
-           "Authorization": "Bearer wdrb_live_your_key_here"
-         }
-       }
-     }
-   }
-   ```
+4. **Start using it!**
+   - Ask Claude: "What's in my wardrobe?"
+   - Ask Claude: "Add this jacket to my wardrobe: [paste product URL]"
+   - Ask Claude: "What should I wear today? It's 65°F and sunny."
 
-3. **Use it!**
+### Programmatic Access (API Keys)
 
-   Ask Claude things like:
-   - "What's in my wardrobe?"
-   - "Add this jacket to my wardrobe: [paste product URL]"
-   - "What should I wear today? It's 65°F and sunny, I have a casual brunch."
+For scripts and automation, you can use API keys instead of OAuth:
+
+1. Sign in to the wardrobe app
+2. Go to Account → API Keys
+3. Create a new key and copy it (you'll only see it once!)
+4. Use in requests: `Authorization: Bearer wdrb_live_xxx`
 
 ### Security
 
+- OAuth authentication via Neon Auth (Google)
 - API keys are hashed with SHA256 before storage
 - Each key is tied to a specific user account
-- Rate limiting: 60 requests per minute per key
+- Rate limiting: 60 requests per minute
 - Keys can be revoked anytime from Account settings

@@ -2,8 +2,9 @@
  * MCP Server Route
  * Exposes wardrobe tools to Claude and other MCP-compatible clients
  *
- * SECURED with API key authentication via withMcpAuth
- * Users must generate an API key from Account settings
+ * SECURED with dual authentication:
+ * - OAuth via Neon Auth (for Claude Desktop)
+ * - API keys (for programmatic access)
  */
 
 import { z } from "zod";
@@ -14,8 +15,16 @@ import { eq } from "drizzle-orm";
 import { put } from "@vercel/blob";
 import { GoogleGenAI } from "@google/genai";
 import { zodToJsonSchema } from "zod-to-json-schema";
+import * as jose from "jose";
+import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { validateApiKey } from "../../../lib/auth/validateApiKey";
 import { checkRateLimit, rateLimitHeaders } from "../../../lib/rateLimit";
+
+// Create JWKS for Neon Auth JWT token validation
+const neonAuthUrl = process.env.NEXT_PUBLIC_NEON_AUTH_URL;
+const JWKS = neonAuthUrl
+  ? jose.createRemoteJWKSet(new URL(`${neonAuthUrl}/.well-known/jwks.json`))
+  : null;
 
 // Define schema inline (same as db.ts pattern)
 import { pgTable, serial, text, uuid, timestamp } from "drizzle-orm/pg-core";
@@ -472,14 +481,72 @@ IMPORTANT: Only use piece IDs from the wardrobe above.`;
   },
 );
 
+/**
+ * Verify Neon Auth JWT tokens
+ * Used for OAuth authentication (Claude Desktop)
+ */
+async function verifyNeonAuthJwt(
+  bearerToken: string
+): Promise<AuthInfo | undefined> {
+  if (!JWKS || !neonAuthUrl) {
+    console.error("JWKS not configured - NEXT_PUBLIC_NEON_AUTH_URL missing");
+    return undefined;
+  }
+
+  try {
+    const { payload } = await jose.jwtVerify(bearerToken, JWKS, {
+      issuer: new URL(neonAuthUrl).origin,
+    });
+
+    if (!payload.sub) return undefined;
+
+    return {
+      token: bearerToken,
+      scopes: ["wardrobe:read", "wardrobe:write"],
+      clientId: "claude-desktop",
+      extra: {
+        userId: payload.sub,
+        email: payload.email as string | undefined,
+      },
+    };
+  } catch (error) {
+    console.error("JWT verification failed:", error);
+    return undefined;
+  }
+}
+
+/**
+ * Combined token verification
+ * Supports both OAuth JWT (Neon Auth) and API keys
+ */
+async function verifyToken(
+  request: Request,
+  bearerToken?: string
+): Promise<AuthInfo | undefined> {
+  if (!bearerToken) return undefined;
+
+  // JWT tokens contain dots (header.payload.signature)
+  if (bearerToken.includes(".")) {
+    const jwtResult = await verifyNeonAuthJwt(bearerToken);
+    if (jwtResult) return jwtResult;
+  }
+
+  // Fall back to API key validation for programmatic access
+  if (bearerToken.startsWith("wdrb_")) {
+    return validateApiKey(request, bearerToken);
+  }
+
+  return undefined;
+}
+
 // Wrap handler with authentication
 const authHandler = withMcpAuth(
   async (request: Request) => {
-    // The userId was set by validateApiKey and stored
+    // The userId was set by verifyToken and stored
     return handler(request);
   },
   async (request: Request, bearerToken?: string) => {
-    const authInfo = await validateApiKey(request, bearerToken);
+    const authInfo = await verifyToken(request, bearerToken);
     if (authInfo?.extra?.userId) {
       // Store userId for tool access
       currentAuthUserId = authInfo.extra.userId as string;
@@ -491,6 +558,7 @@ const authHandler = withMcpAuth(
   {
     required: true,
     requiredScopes: ["wardrobe:read"],
+    resourceMetadataPath: "/.well-known/oauth-protected-resource",
   },
 );
 
