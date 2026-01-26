@@ -1,30 +1,30 @@
 .wardrobe-panel {
-	flex: 1;
-	overflow-y: auto;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .wardrobe-panel__title {
-	font-size: var(--font-size-sm);
-	font-weight: var(--font-weight-medium);
-	letter-spacing: 0.02em;
-	margin-bottom: var(--spacing-md);
-	color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-secondary);
 }
 
 .wardrobe-panel__hint {
-	font-size: var(--font-size-xs);
-	color: var(--color-text-muted);
-	margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--spacing-sm);
 }
 
 .wardrobe-panel__grid {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: var(--spacing-md);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-md);
 }
 
 @media (min-width: 768px) {
-	.wardrobe-panel__hint {
-		display: none;
-	}
+  .wardrobe-panel__hint {
+    display: none;
+  }
 }

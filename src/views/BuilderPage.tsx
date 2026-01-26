@@ -1,244 +1,242 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { DndProvider } from 'react-dnd';
-import { v4 as uuidv4 } from 'uuid';
-import { getDndBackend, getDndBackendOptions } from '../utilities/dndBackend';
-import { isTouchDevice } from '../utilities/dndBackend';
-import { WardrobePanel } from '../components/builder/WardrobePanel';
-import { OutfitCanvas } from '../components/builder/OutfitCanvas';
-import { SuggestPanel } from '../components/builder/SuggestPanel';
-import { useWardrobe } from '../hooks/useWardrobe';
-import { useOutfits } from '../hooks/useOutfits';
-import { getOutfitSuggestions } from '../services/styleAssistant';
-import { OutfitItem, Outfit, OutfitSuggestion, ClothesId } from '../types';
-import './BuilderPage.css';
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { DndProvider } from "react-dnd";
+import { v4 as uuidv4 } from "uuid";
+import { getDndBackend, getDndBackendOptions } from "../utilities/dndBackend";
+import { isTouchDevice } from "../utilities/dndBackend";
+import { WardrobePanel } from "../components/builder/WardrobePanel";
+import { OutfitCanvas } from "../components/builder/OutfitCanvas";
+import { SuggestPanel } from "../components/builder/SuggestPanel";
+import { useWardrobe } from "../hooks/useWardrobe";
+import { useOutfits } from "../hooks/useOutfits";
+import { getOutfitSuggestions } from "../services/styleAssistant";
+import { OutfitItem, Outfit, OutfitSuggestion, ClothesId } from "../types";
+import "./BuilderPage.css";
 
 export const BuilderPage = () => {
-	const { id } = useParams<{ id: string }>();
-	const navigate = useNavigate();
-	const { items } = useWardrobe();
-	const { saveOutfit, getOutfitById } = useOutfits();
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { items } = useWardrobe();
+  const { saveOutfit, getOutfitById } = useOutfits();
 
-	const [outfitName, setOutfitName] = useState('');
-	const [canvasItems, setCanvasItems] = useState<OutfitItem[]>([]);
-	const [isEditing, setIsEditing] = useState(false);
-	const [occasion, setOccasion] = useState('');
+  const [outfitName, setOutfitName] = useState("");
+  const [canvasItems, setCanvasItems] = useState<OutfitItem[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [occasion, setOccasion] = useState("");
 
-	// Suggestion state
-	const [suggestion, setSuggestion] = useState<OutfitSuggestion | null>(null);
-	const [suggestionLoading, setSuggestionLoading] = useState(false);
-	const [suggestionError, setSuggestionError] = useState<string | null>(null);
+  // Suggestion state
+  const [suggestion, setSuggestion] = useState<OutfitSuggestion | null>(null);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
-	// Check if device is touch-enabled for tap-to-add feature
-	const [isTouch, setIsTouch] = useState(false);
-	useEffect(() => {
-		setIsTouch(isTouchDevice());
-	}, []);
+  // Check if device is touch-enabled for tap-to-add feature
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    setIsTouch(isTouchDevice());
+  }, []);
 
-	useEffect(() => {
-		if (id) {
-			const existing = getOutfitById(id);
-			if (existing) {
-				setOutfitName(existing.name);
-				setCanvasItems(existing.items);
-				setIsEditing(true);
-			}
-		}
-	}, [id, getOutfitById]);
+  useEffect(() => {
+    if (id) {
+      const existing = getOutfitById(id);
+      if (existing) {
+        setOutfitName(existing.name);
+        setCanvasItems(existing.items);
+        setIsEditing(true);
+      }
+    }
+  }, [id, getOutfitById]);
 
-	const handleDrop = (clothesId: number) => {
-		const newItem: OutfitItem = {
-			id: uuidv4(),
-			clothesId,
-			position: {
-				x: 50,
-				y: 50,
-				width: 150,
-				height: 200,
-				zIndex: canvasItems.length + 1,
-			},
-		};
-		setCanvasItems((prev) => [...prev, newItem]);
-	};
+  const handleDrop = (clothesId: number) => {
+    const newItem: OutfitItem = {
+      id: uuidv4(),
+      clothesId,
+      position: {
+        x: 50,
+        y: 50,
+        width: 150,
+        height: 200,
+        zIndex: canvasItems.length + 1,
+      },
+    };
+    setCanvasItems((prev) => [...prev, newItem]);
+  };
 
-	// Tap-to-add handler for mobile devices
-	const handleTapToAdd = useCallback(
-		(clothesId: number) => {
-			// Calculate position based on existing items count
-			const itemCount = canvasItems.length;
-			const newItem: OutfitItem = {
-				id: uuidv4(),
-				clothesId,
-				position: {
-					x: 30 + (itemCount % 2) * 120,
-					y: 30 + Math.floor(itemCount / 2) * 180,
-					width: 120,
-					height: 160,
-					zIndex: itemCount + 1,
-				},
-			};
-			setCanvasItems((prev) => [...prev, newItem]);
-		},
-		[canvasItems.length]
-	);
+  // Tap-to-add handler for mobile devices
+  const handleTapToAdd = useCallback(
+    (clothesId: number) => {
+      // Calculate position based on existing items count
+      const itemCount = canvasItems.length;
+      const newItem: OutfitItem = {
+        id: uuidv4(),
+        clothesId,
+        position: {
+          x: 30 + (itemCount % 2) * 120,
+          y: 30 + Math.floor(itemCount / 2) * 180,
+          width: 120,
+          height: 160,
+          zIndex: itemCount + 1,
+        },
+      };
+      setCanvasItems((prev) => [...prev, newItem]);
+    },
+    [canvasItems.length],
+  );
 
-	const handleUpdateItem = (itemId: string, updates: Partial<OutfitItem>) => {
-		setCanvasItems((prev) =>
-			prev.map((item) =>
-				item.id === itemId ? { ...item, ...updates } : item
-			)
-		);
-	};
+  const handleUpdateItem = (itemId: string, updates: Partial<OutfitItem>) => {
+    setCanvasItems((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, ...updates } : item)),
+    );
+  };
 
-	const handleDeleteItem = (itemId: string) => {
-		setCanvasItems((prev) => prev.filter((item) => item.id !== itemId));
-	};
+  const handleDeleteItem = (itemId: string) => {
+    setCanvasItems((prev) => prev.filter((item) => item.id !== itemId));
+  };
 
-	const handleClear = () => {
-		setCanvasItems([]);
-		setOutfitName('');
-		setOccasion('');
-		clearSuggestions();
-	};
+  const handleClear = () => {
+    setCanvasItems([]);
+    setOutfitName("");
+    setOccasion("");
+    clearSuggestions();
+  };
 
-	const handleSuggest = useCallback(
-		async (occasionText?: string) => {
-			if (suggestionLoading) return;
+  const handleSuggest = useCallback(
+    async (occasionText?: string) => {
+      if (suggestionLoading) return;
 
-			setSuggestionLoading(true);
-			setSuggestionError(null);
+      setSuggestionLoading(true);
+      setSuggestionError(null);
 
-			try {
-				const currentItemIds = canvasItems.map((item) => item.clothesId);
-				const result = await getOutfitSuggestions(
-					items,
-					currentItemIds,
-					occasionText || occasion || undefined
-				);
-				setSuggestion(result);
-			} catch (err) {
-				const errorMessage =
-					err instanceof Error ? err.message : 'Failed to get suggestions';
-				setSuggestionError(errorMessage);
-			} finally {
-				setSuggestionLoading(false);
-			}
-		},
-		[canvasItems, items, occasion, suggestionLoading]
-	);
+      try {
+        const currentItemIds = canvasItems.map((item) => item.clothesId);
+        const result = await getOutfitSuggestions(
+          items,
+          currentItemIds,
+          occasionText || occasion || undefined,
+        );
+        setSuggestion(result);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to get suggestions";
+        setSuggestionError(errorMessage);
+      } finally {
+        setSuggestionLoading(false);
+      }
+    },
+    [canvasItems, items, occasion, suggestionLoading],
+  );
 
-	const handleOccasionSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		if (occasion.trim()) {
-			handleSuggest(occasion.trim());
-		}
-	};
+  const handleOccasionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (occasion.trim()) {
+      handleSuggest(occasion.trim());
+    }
+  };
 
-	const clearSuggestions = () => {
-		setSuggestion(null);
-		setSuggestionError(null);
-	};
+  const clearSuggestions = () => {
+    setSuggestion(null);
+    setSuggestionError(null);
+  };
 
-	const handleAddAllSuggestions = (ids: ClothesId[]) => {
-		// Add all suggested items to the canvas with staggered positions
-		const newItems: OutfitItem[] = ids.map((clothesId, index) => ({
-			id: uuidv4(),
-			clothesId,
-			position: {
-				x: 50 + (index % 3) * 160,
-				y: 50 + Math.floor(index / 3) * 220,
-				width: 150,
-				height: 200,
-				zIndex: canvasItems.length + index + 1,
-			},
-		}));
-		setCanvasItems((prev) => [...prev, ...newItems]);
-		clearSuggestions();
-	};
+  const handleAddAllSuggestions = (ids: ClothesId[]) => {
+    // Add all suggested items to the canvas with staggered positions
+    const newItems: OutfitItem[] = ids.map((clothesId, index) => ({
+      id: uuidv4(),
+      clothesId,
+      position: {
+        x: 50 + (index % 3) * 160,
+        y: 50 + Math.floor(index / 3) * 220,
+        width: 150,
+        height: 200,
+        zIndex: canvasItems.length + index + 1,
+      },
+    }));
+    setCanvasItems((prev) => [...prev, ...newItems]);
+    clearSuggestions();
+  };
 
-	const handleSave = async () => {
-		if (canvasItems.length === 0) {
-			return;
-		}
+  const handleSave = async () => {
+    if (canvasItems.length === 0) {
+      return;
+    }
 
-		const now = new Date().toISOString();
-		const outfit: Outfit = {
-			id: isEditing && id ? id : uuidv4(),
-			name: outfitName || 'Untitled Outfit',
-			items: canvasItems,
-			createdAt: isEditing && id ? (getOutfitById(id)?.createdAt || now) : now,
-			updatedAt: now,
-		};
+    const now = new Date().toISOString();
+    const outfit: Outfit = {
+      id: isEditing && id ? id : uuidv4(),
+      name: outfitName || "Untitled Outfit",
+      items: canvasItems,
+      createdAt: isEditing && id ? getOutfitById(id)?.createdAt || now : now,
+      updatedAt: now,
+    };
 
-		await saveOutfit(outfit);
-		navigate('/outfits');
-	};
+    await saveOutfit(outfit);
+    navigate("/outfits");
+  };
 
-	const backend = getDndBackend();
-	const backendOptions = getDndBackendOptions();
+  const backend = getDndBackend();
+  const backendOptions = getDndBackendOptions();
 
-	return (
-		<DndProvider backend={backend} options={backendOptions}>
-			<div className="builder-page">
-				<div className="builder-page__content">
-					<div className="builder-page__sidebar">
-						<SuggestPanel
-							suggestion={suggestion}
-							wardrobe={items}
-							isLoading={suggestionLoading}
-							error={suggestionError}
-							onClear={clearSuggestions}
-							onAddAll={handleAddAllSuggestions}
-							occasion={occasion}
-							onOccasionChange={setOccasion}
-							onOccasionSubmit={handleOccasionSubmit}
-						/>
-						<WardrobePanel
-							items={items}
-							suggestedIds={suggestion?.suggestedItemIds}
-							onTapToAdd={isTouch ? handleTapToAdd : undefined}
-						/>
-					</div>
-					<OutfitCanvas
-						items={canvasItems}
-						wardrobeItems={items}
-						onDrop={handleDrop}
-						onUpdateItem={handleUpdateItem}
-						onDeleteItem={handleDeleteItem}
-					/>
-				</div>
-				<div className="builder-page__footer">
-					<input
-						type="text"
-						className="builder-page__name-input"
-						placeholder="Outfit name..."
-						value={outfitName}
-						onChange={(e) => setOutfitName(e.target.value)}
-					/>
-					<div className="builder-page__actions">
-						<button
-							className="builder-page__btn builder-page__btn--suggest"
-							onClick={() => handleSuggest()}
-							disabled={suggestionLoading}
-						>
-							{suggestionLoading ? 'Suggesting...' : 'Suggest'}
-						</button>
-						<button
-							className="builder-page__btn builder-page__btn--secondary"
-							onClick={handleClear}
-						>
-							Clear
-						</button>
-						<button
-							className="builder-page__btn builder-page__btn--primary"
-							onClick={handleSave}
-							disabled={canvasItems.length === 0}
-						>
-							{isEditing ? 'Update Outfit' : 'Save Outfit'}
-						</button>
-					</div>
-				</div>
-			</div>
-		</DndProvider>
-	);
+  return (
+    <DndProvider backend={backend} options={backendOptions}>
+      <div className="builder-page">
+        <div className="builder-page__content">
+          <div className="builder-page__sidebar">
+            <SuggestPanel
+              suggestion={suggestion}
+              wardrobe={items}
+              isLoading={suggestionLoading}
+              error={suggestionError}
+              onClear={clearSuggestions}
+              onAddAll={handleAddAllSuggestions}
+              occasion={occasion}
+              onOccasionChange={setOccasion}
+              onOccasionSubmit={handleOccasionSubmit}
+            />
+            <WardrobePanel
+              items={items}
+              suggestedIds={suggestion?.suggestedItemIds}
+              onTapToAdd={isTouch ? handleTapToAdd : undefined}
+            />
+          </div>
+          <OutfitCanvas
+            items={canvasItems}
+            wardrobeItems={items}
+            onDrop={handleDrop}
+            onUpdateItem={handleUpdateItem}
+            onDeleteItem={handleDeleteItem}
+          />
+        </div>
+        <div className="builder-page__footer">
+          <input
+            type="text"
+            className="builder-page__name-input"
+            placeholder="Outfit name..."
+            value={outfitName}
+            onChange={(e) => setOutfitName(e.target.value)}
+          />
+          <div className="builder-page__actions">
+            <button
+              className="builder-page__btn builder-page__btn--suggest"
+              onClick={() => handleSuggest()}
+              disabled={suggestionLoading}
+            >
+              {suggestionLoading ? "Suggesting..." : "Suggest"}
+            </button>
+            <button
+              className="builder-page__btn builder-page__btn--secondary"
+              onClick={handleClear}
+            >
+              Clear
+            </button>
+            <button
+              className="builder-page__btn builder-page__btn--primary"
+              onClick={handleSave}
+              disabled={canvasItems.length === 0}
+            >
+              {isEditing ? "Update Outfit" : "Save Outfit"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </DndProvider>
+  );
 };

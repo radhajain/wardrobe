@@ -1,21 +1,21 @@
-import type { Metadata } from 'next';
-import '../index.css';
+import type { Metadata } from "next";
+import "../index.css";
 
 export const metadata: Metadata = {
-	title: 'Wardrobe',
-	description: 'Your personal wardrobe manager',
+  title: "Wardrobe",
+  description: "Your personal wardrobe manager",
 };
 
 export default function RootLayout({
-	children,
+  children,
 }: {
-	children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-	return (
-		<html lang="en" suppressHydrationWarning>
-			<body suppressHydrationWarning>
-				<div id="root">{children}</div>
-			</body>
-		</html>
-	);
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <div id="root">{children}</div>
+      </body>
+    </html>
+  );
 }

@@ -1,40 +1,40 @@
 .outfit-card-skeleton {
-	display: flex;
-	flex-direction: column;
-	background-color: var(--color-surface);
-	border: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .outfit-card-skeleton__preview {
-	aspect-ratio: 4 / 3;
-	width: 100%;
+  aspect-ratio: 4 / 3;
+  width: 100%;
 }
 
 .outfit-card-skeleton__info {
-	padding: var(--spacing-md);
+  padding: var(--spacing-md);
 }
 
 .outfit-card-skeleton__name {
-	width: 60%;
-	height: var(--font-size-sm);
-	margin-bottom: var(--spacing-xs);
+  width: 60%;
+  height: var(--font-size-sm);
+  margin-bottom: var(--spacing-xs);
 }
 
 .outfit-card-skeleton__date {
-	width: 40%;
-	height: var(--font-size-xs);
+  width: 40%;
+  height: var(--font-size-xs);
 }
 
 .outfit-card-skeleton__actions {
-	display: flex;
-	border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .outfit-card-skeleton__btn {
-	flex: 1;
-	height: 36px;
+  flex: 1;
+  height: 36px;
 }
 
 .outfit-card-skeleton__btn:first-child {
-	border-right: 1px solid var(--color-border-subtle);
+  border-right: 1px solid var(--color-border-subtle);
 }

@@ -1,157 +1,161 @@
 .suggestion-card {
-	display: flex;
-	flex-direction: column;
-	gap: var(--spacing-md);
-	padding: var(--spacing-lg);
-	background: var(--color-background);
-	border: 1px solid var(--color-border);
-	transition: border-color 0.2s, opacity 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  transition:
+    border-color 0.2s,
+    opacity 0.2s;
 }
 
 .suggestion-card--approved {
-	border-color: var(--color-text-primary);
+  border-color: var(--color-text-primary);
 }
 
 .suggestion-card--rejected {
-	opacity: 0.5;
+  opacity: 0.5;
 }
 
 .suggestion-card__header {
-	display: flex;
-	flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
 
 .suggestion-card__title {
-	font-size: var(--font-size-base);
-	font-weight: var(--font-weight-medium);
-	margin: 0;
-	display: flex;
-	align-items: center;
-	gap: var(--spacing-sm);
-	flex-wrap: wrap;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
 }
 
 .suggestion-card__refined-badge {
-	font-size: var(--font-size-xs);
-	font-weight: var(--font-weight-normal);
-	padding: 2px 8px;
-	background: var(--color-background-alt);
-	color: var(--color-text-secondary);
-	border-radius: var(--radius-sm);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  padding: 2px 8px;
+  background: var(--color-background-alt);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .suggestion-card__edit {
-	display: flex;
-	flex-direction: column;
-	gap: var(--spacing-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
 }
 
 .suggestion-card__textarea {
-	width: 100%;
-	padding: var(--spacing-sm);
-	border: 1px solid var(--color-border);
-	font-family: inherit;
-	font-size: var(--font-size-base);
-	resize: vertical;
-	min-height: 60px;
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  resize: vertical;
+  min-height: 60px;
 }
 
 .suggestion-card__textarea:focus {
-	outline: none;
-	border-color: var(--color-text-primary);
+  outline: none;
+  border-color: var(--color-text-primary);
 }
 
 .suggestion-card__edit-actions {
-	display: flex;
-	gap: var(--spacing-xs);
+  display: flex;
+  gap: var(--spacing-xs);
 }
 
 .suggestion-card__edit-btn {
-	padding: var(--spacing-xs) var(--spacing-sm);
-	background: var(--color-text-primary);
-	color: var(--color-background);
-	border: none;
-	font-family: inherit;
-	font-size: var(--font-size-sm);
-	cursor: pointer;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-text-primary);
+  color: var(--color-background);
+  border: none;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
 }
 
 .suggestion-card__edit-btn--cancel {
-	background: transparent;
-	color: var(--color-text-secondary);
-	border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
 }
 
 .suggestion-card__edit-btn:hover {
-	opacity: 0.8;
+  opacity: 0.8;
 }
 
 .suggestion-card__rationale {
-	font-size: var(--font-size-sm);
-	color: var(--color-text-secondary);
-	margin: 0;
-	line-height: 1.5;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.5;
 }
 
 .suggestion-card__actions {
-	display: flex;
-	gap: var(--spacing-sm);
-	flex-wrap: wrap;
-	margin-top: var(--spacing-sm);
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  margin-top: var(--spacing-sm);
 }
 
 .suggestion-card__btn {
-	padding: var(--spacing-xs) var(--spacing-md);
-	font-family: inherit;
-	font-size: var(--font-size-sm);
-	cursor: pointer;
-	transition: opacity 0.2s, background 0.2s;
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition:
+    opacity 0.2s,
+    background 0.2s;
 }
 
 .suggestion-card__btn:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .suggestion-card__btn--approve {
-	background: var(--color-text-primary);
-	color: var(--color-background);
-	border: none;
+  background: var(--color-text-primary);
+  color: var(--color-background);
+  border: none;
 }
 
 .suggestion-card__btn--approve:hover:not(:disabled) {
-	opacity: 0.8;
+  opacity: 0.8;
 }
 
 .suggestion-card__btn--search {
-	background: var(--color-text-primary);
-	color: var(--color-background);
-	border: none;
+  background: var(--color-text-primary);
+  color: var(--color-background);
+  border: none;
 }
 
 .suggestion-card__btn--search:hover:not(:disabled) {
-	opacity: 0.8;
+  opacity: 0.8;
 }
 
 .suggestion-card__btn--edit {
-	background: transparent;
-	color: var(--color-text-primary);
-	border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
 }
 
 .suggestion-card__btn--edit:hover:not(:disabled) {
-	border-color: var(--color-text-primary);
+  border-color: var(--color-text-primary);
 }
 
 .suggestion-card__btn--reject {
-	background: transparent;
-	color: var(--color-text-secondary);
-	border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
 }
 
 .suggestion-card__btn--reject:hover {
-	color: var(--color-text-primary);
-	border-color: var(--color-text-primary);
+  color: var(--color-text-primary);
+  border-color: var(--color-text-primary);
 }
