@@ -1,6 +1,33 @@
+/**
+ * Image Migration API
+ *
+ * Migrates images from external URLs to Vercel Blob storage.
+ *
+ * POST /api/migrate-images
+ *
+ * Body parameters:
+ *   - secret: (optional) Migration secret for auth if MIGRATION_SECRET env var is set
+ *   - dryRun: (optional) If true, returns list of pieces to migrate without actually migrating
+ *   - pieceIds: (optional) Array of piece IDs to migrate. If provided, only these pieces will be
+ *               processed (and their persisted_image_url will be overwritten even if it exists).
+ *               If not provided, migrates all pieces where persisted_image_url is null.
+ *   - force: (optional) If true, re-uploads images even if persisted_image_url already exists.
+ *            Only applies when pieceIds is provided.
+ *
+ * Examples:
+ *   // Dry run to see what would be migrated
+ *   curl -X POST /api/migrate-images -d '{"dryRun": true}'
+ *
+ *   // Migrate all pieces without persisted images
+ *   curl -X POST /api/migrate-images
+ *
+ *   // Re-migrate specific pieces (will overwrite existing persisted URLs)
+ *   curl -X POST /api/migrate-images -d '{"pieceIds": [40, 42, 50, 57, 70], "force": true}'
+ */
+
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
-import { eq, isNull, isNotNull, and } from 'drizzle-orm';
+import { eq, isNull, isNotNull, and, inArray } from 'drizzle-orm';
 import { pgTable, serial, text, uuid, timestamp } from 'drizzle-orm/pg-core';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { put } from '@vercel/blob';
@@ -89,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 	}
 
 	// Optional: Add a secret key for protection
-	const { secret, dryRun } = req.body || {};
+	const { secret, dryRun, pieceIds, force } = req.body || {};
 	const expectedSecret = process.env.MIGRATION_SECRET;
 
 	if (expectedSecret && secret !== expectedSecret) {
@@ -104,20 +131,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 	try {
 		const db = getDb();
 
-		// Get all pieces that need migration
-		const piecesToMigrate = await db
-			.select({
-				id: pieces.id,
-				name: pieces.name,
-				originalImageUrl: pieces.originalImageUrl,
-			})
-			.from(pieces)
-			.where(
-				and(
-					isNull(pieces.persistedImageUrl),
-					isNotNull(pieces.originalImageUrl)
-				)
-			);
+		// Get pieces to migrate based on parameters
+		let piecesToMigrate;
+
+		if (pieceIds && Array.isArray(pieceIds) && pieceIds.length > 0) {
+			// Migrate specific pieces by ID (optionally forcing re-upload)
+			const baseQuery = db
+				.select({
+					id: pieces.id,
+					name: pieces.name,
+					originalImageUrl: pieces.originalImageUrl,
+					persistedImageUrl: pieces.persistedImageUrl,
+				})
+				.from(pieces)
+				.where(
+					and(
+						inArray(pieces.id, pieceIds),
+						isNotNull(pieces.originalImageUrl)
+					)
+				);
+
+			const allPieces = await baseQuery;
+
+			// If force is true, include all pieces; otherwise only those without persisted URL
+			piecesToMigrate = force
+				? allPieces
+				: allPieces.filter((p) => !p.persistedImageUrl);
+		} else {
+			// Default: migrate all pieces without persisted images
+			piecesToMigrate = await db
+				.select({
+					id: pieces.id,
+					name: pieces.name,
+					originalImageUrl: pieces.originalImageUrl,
+				})
+				.from(pieces)
+				.where(
+					and(
+						isNull(pieces.persistedImageUrl),
+						isNotNull(pieces.originalImageUrl)
+					)
+				);
+		}
 
 		if (dryRun) {
 			return res.json({
