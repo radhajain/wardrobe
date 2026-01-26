@@ -11,7 +11,7 @@ import {
 } from "@clerk/mcp-tools/next";
 
 const handler = protectedResourceHandlerClerk({
-  scopes_supported: ["wardrobe:read", "wardrobe:write"],
+  scopes_supported: ["profile", "email"],
 });
 
 const corsHandler = metadataCorsOptionsRequestHandler();

@@ -477,15 +477,22 @@ IMPORTANT: Only use piece IDs from the wardrobe above.`;
 
 /**
  * Verify Clerk OAuth tokens (for Claude Desktop)
+ * The auth() function automatically reads the Bearer token from headers
  */
 async function verifyClerkOAuthToken(
   bearerToken: string
 ): Promise<AuthInfo | undefined> {
   try {
-    // Use Clerk's auth() with OAuth token acceptance
+    // auth() with acceptsToken: "oauth_token" will verify the Bearer token
+    // that was passed in the Authorization header
     const { auth } = await import("@clerk/nextjs/server");
     const clerkAuth = await auth({ acceptsToken: "oauth_token" });
-    const result = await verifyClerkToken(clerkAuth, bearerToken);
+
+    // verifyClerkToken checks if auth is authenticated and extracts user info
+    const result = verifyClerkToken(clerkAuth, bearerToken);
+    if (result) {
+      console.log("Clerk OAuth verified for user:", result.extra?.userId);
+    }
     return result;
   } catch (error) {
     console.error("Clerk token verification failed:", error);
@@ -535,7 +542,7 @@ const authHandler = withMcpAuth(
   },
   {
     required: true,
-    requiredScopes: ["wardrobe:read"],
+    requiredScopes: ["profile"],
     resourceMetadataPath: "/.well-known/oauth-protected-resource/mcp",
   },
 );
