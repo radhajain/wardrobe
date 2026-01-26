@@ -2,8 +2,9 @@
  * MCP Server Route
  * Exposes wardrobe tools to Claude and other MCP-compatible clients
  *
- * SECURED with dual authentication:
- * - OAuth via Neon Auth (for Claude Desktop)
+ * SECURED with multiple authentication methods:
+ * - OAuth via Clerk (for Claude Desktop)
+ * - OAuth via Neon Auth (fallback)
  * - API keys (for programmatic access)
  */
 
@@ -17,10 +18,11 @@ import { GoogleGenAI } from "@google/genai";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import * as jose from "jose";
 import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import { verifyClerkToken } from "@clerk/mcp-tools/next";
 import { validateApiKey } from "../../../lib/auth/validateApiKey";
 import { checkRateLimit, rateLimitHeaders } from "../../../lib/rateLimit";
 
-// Create JWKS for Neon Auth JWT token validation
+// Create JWKS for Neon Auth JWT token validation (fallback)
 const neonAuthUrl = process.env.NEXT_PUBLIC_NEON_AUTH_URL;
 const JWKS = neonAuthUrl
   ? jose.createRemoteJWKSet(new URL(`${neonAuthUrl}/.well-known/jwks.json`))
@@ -482,14 +484,30 @@ IMPORTANT: Only use piece IDs from the wardrobe above.`;
 );
 
 /**
- * Verify Neon Auth JWT tokens
- * Used for OAuth authentication (Claude Desktop)
+ * Verify Clerk OAuth tokens (for Claude Desktop)
+ */
+async function verifyClerkOAuthToken(
+  bearerToken: string
+): Promise<AuthInfo | undefined> {
+  try {
+    // Use Clerk's auth() with OAuth token acceptance
+    const { auth } = await import("@clerk/nextjs/server");
+    const clerkAuth = await auth({ acceptsToken: "oauth_token" });
+    const result = await verifyClerkToken(clerkAuth, bearerToken);
+    return result;
+  } catch (error) {
+    console.error("Clerk token verification failed:", error);
+    return undefined;
+  }
+}
+
+/**
+ * Verify Neon Auth JWT tokens (fallback)
  */
 async function verifyNeonAuthJwt(
   bearerToken: string
 ): Promise<AuthInfo | undefined> {
   if (!JWKS || !neonAuthUrl) {
-    console.error("JWKS not configured - NEXT_PUBLIC_NEON_AUTH_URL missing");
     return undefined;
   }
 
@@ -503,21 +521,21 @@ async function verifyNeonAuthJwt(
     return {
       token: bearerToken,
       scopes: ["wardrobe:read", "wardrobe:write"],
-      clientId: "claude-desktop",
+      clientId: "neon-auth",
       extra: {
         userId: payload.sub,
         email: payload.email as string | undefined,
       },
     };
   } catch (error) {
-    console.error("JWT verification failed:", error);
+    console.error("Neon Auth JWT verification failed:", error);
     return undefined;
   }
 }
 
 /**
  * Combined token verification
- * Supports both OAuth JWT (Neon Auth) and API keys
+ * Supports Clerk OAuth, Neon Auth JWT, and API keys
  */
 async function verifyToken(
   request: Request,
@@ -525,10 +543,14 @@ async function verifyToken(
 ): Promise<AuthInfo | undefined> {
   if (!bearerToken) return undefined;
 
-  // JWT tokens contain dots (header.payload.signature)
+  // Try Clerk OAuth first (for Claude Desktop)
   if (bearerToken.includes(".")) {
-    const jwtResult = await verifyNeonAuthJwt(bearerToken);
-    if (jwtResult) return jwtResult;
+    const clerkResult = await verifyClerkOAuthToken(bearerToken);
+    if (clerkResult) return clerkResult;
+
+    // Fall back to Neon Auth JWT
+    const neonResult = await verifyNeonAuthJwt(bearerToken);
+    if (neonResult) return neonResult;
   }
 
   // Fall back to API key validation for programmatic access
@@ -558,7 +580,7 @@ const authHandler = withMcpAuth(
   {
     required: true,
     requiredScopes: ["wardrobe:read"],
-    resourceMetadataPath: "/.well-known/oauth-protected-resource",
+    resourceMetadataPath: "/.well-known/oauth-protected-resource/mcp",
   },
 );
 

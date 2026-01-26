@@ -104,14 +104,16 @@ The app includes an MCP server to allow AI assistants to interact with your ward
    - Click "Add Connector"
    - Enter URL: `https://wardrobe.radhajain.com/api/mcp`
 
-3. **Sign in with Google**
-   - Claude will open a login window
-   - Sign in with the same Google account you use for the wardrobe app
+3. **Sign in with Clerk**
+   - Claude will open a login window via Clerk OAuth
+   - Sign in with Google or your preferred method
 
 4. **Start using it!**
    - Ask Claude: "What's in my wardrobe?"
    - Ask Claude: "Add this jacket to my wardrobe: [paste product URL]"
    - Ask Claude: "What should I wear today? It's 65°F and sunny."
+
+> **Note:** Claude Desktop uses Clerk for OAuth authentication, which is separate from the web app's Neon Auth. Your wardrobe data is linked by email address.
 
 ### Programmatic Access (API Keys)
 
@@ -124,7 +126,8 @@ For scripts and automation, you can use API keys instead of OAuth:
 
 ### Security
 
-- OAuth authentication via Neon Auth (Google)
+- OAuth via Clerk (for Claude Desktop)
+- OAuth via Neon Auth (for web app)
 - API keys are hashed with SHA256 before storage
 - Each key is tied to a specific user account
 - Rate limiting: 60 requests per minute
