@@ -7,22 +7,21 @@
  * - API keys (for programmatic access)
  */
 
-import { z } from "zod";
-import { createMcpHandler, withMcpAuth } from "mcp-handler";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
-import { eq } from "drizzle-orm";
-import { put } from "@vercel/blob";
-import { GoogleGenAI } from "@google/genai";
-import { zodToJsonSchema } from "zod-to-json-schema";
-import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { verifyClerkToken } from "@clerk/mcp-tools/next";
+import { GoogleGenAI } from "@google/genai";
+import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import { neon } from "@neondatabase/serverless";
+import { put } from "@vercel/blob";
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/neon-http";
+import { createMcpHandler, withMcpAuth } from "mcp-handler";
+import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 import { validateApiKey } from "../../../lib/auth/validateApiKey";
 import { checkRateLimit, rateLimitHeaders } from "../../../lib/rateLimit";
 
 // Define schema inline (same as db.ts pattern)
 import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
-import { NextResponse } from "next/server";
 
 const users = pgTable("users", {
   id: text("id").primaryKey(),
