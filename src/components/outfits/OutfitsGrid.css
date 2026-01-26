@@ -1,5 +1,12 @@
 .outfits-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-	gap: var(--spacing-xl);
+	grid-template-columns: repeat(2, 1fr);
+	gap: var(--spacing-md);
+}
+
+@media (min-width: 768px) {
+	.outfits-grid {
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		gap: var(--spacing-xl);
+	}
 }

@@ -11,8 +11,20 @@
 	color: var(--color-text-secondary);
 }
 
+.wardrobe-panel__hint {
+	font-size: var(--font-size-xs);
+	color: var(--color-text-muted);
+	margin-bottom: var(--spacing-sm);
+}
+
 .wardrobe-panel__grid {
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
 	gap: var(--spacing-md);
+}
+
+@media (min-width: 768px) {
+	.wardrobe-panel__hint {
+		display: none;
+	}
 }

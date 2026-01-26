@@ -6,9 +6,14 @@ import './DraggablePiece.css';
 interface DraggablePieceProps {
 	piece: ClothesWithId;
 	isSuggested?: boolean;
+	onTap?: (pieceId: number) => void;
 }
 
-export const DraggablePiece = ({ piece, isSuggested = false }: DraggablePieceProps) => {
+export const DraggablePiece = ({
+	piece,
+	isSuggested = false,
+	onTap,
+}: DraggablePieceProps) => {
 	const ref = useRef<HTMLDivElement>(null);
 	const [{ isDragging }, drag] = useDrag(() => ({
 		type: 'WARDROBE_PIECE',
@@ -20,16 +25,23 @@ export const DraggablePiece = ({ piece, isSuggested = false }: DraggablePiecePro
 
 	drag(ref);
 
+	const handleClick = () => {
+		if (onTap) {
+			onTap(piece.id);
+		}
+	};
+
 	const className = [
 		'draggable-piece',
 		isDragging && 'draggable-piece--dragging',
 		isSuggested && 'draggable-piece--suggested',
+		onTap && 'draggable-piece--tappable',
 	]
 		.filter(Boolean)
 		.join(' ');
 
 	return (
-		<div ref={ref} className={className}>
+		<div ref={ref} className={className} onClick={handleClick}>
 			{isSuggested && <span className="draggable-piece__tag">Suggested</span>}
 			<div className="draggable-piece__image-container">
 				{piece.imageUrl ? (

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { OutfitsGrid } from '../components/outfits/OutfitsGrid';
+import { OutfitsGridSkeleton } from '../components/outfits/OutfitsGridSkeleton';
 import { useOutfits } from '../hooks/useOutfits';
 import './OutfitsPage.css';
 
@@ -15,21 +16,15 @@ export const OutfitsPage = () => {
 		await deleteOutfit(id);
 	};
 
-	if (loading) {
-		return (
-			<div className="outfits-page">
-				<div className="outfits-page__loading">Loading...</div>
-			</div>
-		);
-	}
-
 	return (
 		<div className="outfits-page">
 			<div className="outfits-page__header">
 				<h1 className="outfits-page__title">My Outfits</h1>
-				<p className="outfits-page__count">{outfits.length} outfits</p>
+				{!loading && <p className="outfits-page__count">{outfits.length} outfits</p>}
 			</div>
-			{outfits.length === 0 ? (
+			{loading ? (
+				<OutfitsGridSkeleton count={6} />
+			) : outfits.length === 0 ? (
 				<div className="outfits-page__empty">
 					<p>No outfits yet.</p>
 					<button

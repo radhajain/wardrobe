@@ -110,3 +110,52 @@
 	right: -5px;
 	cursor: se-resize;
 }
+
+/* Prevent scrolling during drag */
+.canvas-item--dragging,
+.canvas-item--resizing {
+	touch-action: none;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 767px) {
+	/* Larger resize handles for touch (44px minimum tap target) */
+	.canvas-item__handle {
+		width: 24px;
+		height: 24px;
+	}
+
+	/* Adjust handle positions */
+	.canvas-item__handle--nw {
+		top: -12px;
+		left: -12px;
+	}
+
+	.canvas-item__handle--ne {
+		top: -12px;
+		right: -12px;
+	}
+
+	.canvas-item__handle--sw {
+		bottom: -12px;
+		left: -12px;
+	}
+
+	.canvas-item__handle--se {
+		bottom: -12px;
+		right: -12px;
+	}
+
+	/* Always show controls on mobile (no hover) */
+	.canvas-item .canvas-item__handle,
+	.canvas-item .canvas-item__controls {
+		opacity: 1;
+	}
+
+	/* Larger control buttons for touch */
+	.canvas-item__btn {
+		width: 32px;
+		height: 32px;
+		font-size: 18px;
+	}
+}

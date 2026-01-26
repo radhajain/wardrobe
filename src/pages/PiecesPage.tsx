@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PiecesGrid } from '../components/pieces/PiecesGrid';
+import { PiecesGridSkeleton } from '../components/pieces/PiecesGridSkeleton';
 import { PieceDetail } from '../components/pieces/PieceDetail';
 import { AddPieceModal } from '../components/pieces/AddPieceModal';
 import { useWardrobe } from '../hooks/useWardrobe';
@@ -60,46 +61,44 @@ export const PiecesPage = () => {
 		navigate('/pieces');
 	};
 
-	if (loading) {
-		return (
-			<div className="pieces-page">
-				<div className="pieces-page__loading">Loading...</div>
-			</div>
-		);
-	}
-
 	return (
 		<div className="pieces-page">
 			<div className="pieces-page__header">
 				<div className="pieces-page__title-group">
 					<h1 className="pieces-page__title">My Pieces</h1>
-					<p className="pieces-page__count">{items.length} items</p>
+					{!loading && <p className="pieces-page__count">{items.length} items</p>}
 				</div>
-				<button
-					className="pieces-page__add-btn"
-					onClick={() => setShowAddModal(true)}
-				>
-					+ Add Piece
-				</button>
+				{!loading && (
+					<button
+						className="pieces-page__add-btn"
+						onClick={() => setShowAddModal(true)}
+					>
+						+ Add Piece
+					</button>
+				)}
 			</div>
 
-			<PiecesGrid
-				items={items}
-				selectedId={selectedPieceId}
-				onPieceClick={handlePieceClick}
-				detailPanel={
-					selectedPiece ? (
-						<PieceDetail
-							piece={selectedPiece}
-							outfitsUsingPiece={outfitsUsingPiece}
-							wardrobeItems={items}
-							onUpdate={handleUpdatePiece}
-							onDelete={handleDeletePiece}
-							onClose={handleCloseDetail}
-						/>
-					) : undefined
-				}
-			/>
+			{loading ? (
+				<PiecesGridSkeleton count={8} />
+			) : (
+					<PiecesGrid
+					items={items}
+					selectedId={selectedPieceId}
+					onPieceClick={handlePieceClick}
+					detailPanel={
+						selectedPiece ? (
+							<PieceDetail
+								piece={selectedPiece}
+								outfitsUsingPiece={outfitsUsingPiece}
+								wardrobeItems={items}
+								onUpdate={handleUpdatePiece}
+								onDelete={handleDeletePiece}
+								onClose={handleCloseDetail}
+							/>
+						) : undefined
+					}
+				/>
+			)}
 
 			{showAddModal && (
 				<AddPieceModal

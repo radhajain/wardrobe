@@ -1,0 +1,19 @@
+.piece-card-skeleton {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+}
+
+.piece-card-skeleton__image {
+	aspect-ratio: 3 / 4;
+	width: 100%;
+}
+
+.piece-card-skeleton__info {
+	padding: var(--spacing-sm) 0;
+}
+
+.piece-card-skeleton__name {
+	width: 70%;
+	height: var(--font-size-sm);
+}

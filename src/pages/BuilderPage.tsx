@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import { v4 as uuidv4 } from 'uuid';
+import { getDndBackend, getDndBackendOptions } from '../utilities/dndBackend';
+import { isTouchDevice } from '../utilities/dndBackend';
 import { WardrobePanel } from '../components/builder/WardrobePanel';
 import { OutfitCanvas } from '../components/builder/OutfitCanvas';
 import { SuggestPanel } from '../components/builder/SuggestPanel';
@@ -21,11 +22,18 @@ export const BuilderPage = () => {
 	const [outfitName, setOutfitName] = useState('');
 	const [canvasItems, setCanvasItems] = useState<OutfitItem[]>([]);
 	const [isEditing, setIsEditing] = useState(false);
+	const [occasion, setOccasion] = useState('');
 
 	// Suggestion state
 	const [suggestion, setSuggestion] = useState<OutfitSuggestion | null>(null);
 	const [suggestionLoading, setSuggestionLoading] = useState(false);
 	const [suggestionError, setSuggestionError] = useState<string | null>(null);
+
+	// Check if device is touch-enabled for tap-to-add feature
+	const [isTouch, setIsTouch] = useState(false);
+	useEffect(() => {
+		setIsTouch(isTouchDevice());
+	}, []);
 
 	useEffect(() => {
 		if (id) {
@@ -53,6 +61,27 @@ export const BuilderPage = () => {
 		setCanvasItems((prev) => [...prev, newItem]);
 	};
 
+	// Tap-to-add handler for mobile devices
+	const handleTapToAdd = useCallback(
+		(clothesId: number) => {
+			// Calculate position based on existing items count
+			const itemCount = canvasItems.length;
+			const newItem: OutfitItem = {
+				id: uuidv4(),
+				clothesId,
+				position: {
+					x: 30 + (itemCount % 2) * 120,
+					y: 30 + Math.floor(itemCount / 2) * 180,
+					width: 120,
+					height: 160,
+					zIndex: itemCount + 1,
+				},
+			};
+			setCanvasItems((prev) => [...prev, newItem]);
+		},
+		[canvasItems.length]
+	);
+
 	const handleUpdateItem = (itemId: string, updates: Partial<OutfitItem>) => {
 		setCanvasItems((prev) =>
 			prev.map((item) =>
@@ -68,27 +97,42 @@ export const BuilderPage = () => {
 	const handleClear = () => {
 		setCanvasItems([]);
 		setOutfitName('');
+		setOccasion('');
 		clearSuggestions();
 	};
 
-	const handleSuggest = useCallback(async () => {
-		if (suggestionLoading) return;
+	const handleSuggest = useCallback(
+		async (occasionText?: string) => {
+			if (suggestionLoading) return;
 
-		setSuggestionLoading(true);
-		setSuggestionError(null);
+			setSuggestionLoading(true);
+			setSuggestionError(null);
 
-		try {
-			const currentItemIds = canvasItems.map((item) => item.clothesId);
-			const result = await getOutfitSuggestions(items, currentItemIds);
-			setSuggestion(result);
-		} catch (err) {
-			const errorMessage =
-				err instanceof Error ? err.message : 'Failed to get suggestions';
-			setSuggestionError(errorMessage);
-		} finally {
-			setSuggestionLoading(false);
+			try {
+				const currentItemIds = canvasItems.map((item) => item.clothesId);
+				const result = await getOutfitSuggestions(
+					items,
+					currentItemIds,
+					occasionText || occasion || undefined
+				);
+				setSuggestion(result);
+			} catch (err) {
+				const errorMessage =
+					err instanceof Error ? err.message : 'Failed to get suggestions';
+				setSuggestionError(errorMessage);
+			} finally {
+				setSuggestionLoading(false);
+			}
+		},
+		[canvasItems, items, occasion, suggestionLoading]
+	);
+
+	const handleOccasionSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		if (occasion.trim()) {
+			handleSuggest(occasion.trim());
 		}
-	}, [canvasItems, items, suggestionLoading]);
+	};
 
 	const clearSuggestions = () => {
 		setSuggestion(null);
@@ -130,8 +174,11 @@ export const BuilderPage = () => {
 		navigate('/outfits');
 	};
 
+	const backend = getDndBackend();
+	const backendOptions = getDndBackendOptions();
+
 	return (
-		<DndProvider backend={HTML5Backend}>
+		<DndProvider backend={backend} options={backendOptions}>
 			<div className="builder-page">
 				<div className="builder-page__content">
 					<div className="builder-page__sidebar">
@@ -142,10 +189,14 @@ export const BuilderPage = () => {
 							error={suggestionError}
 							onClear={clearSuggestions}
 							onAddAll={handleAddAllSuggestions}
+							occasion={occasion}
+							onOccasionChange={setOccasion}
+							onOccasionSubmit={handleOccasionSubmit}
 						/>
 						<WardrobePanel
 							items={items}
 							suggestedIds={suggestion?.suggestedItemIds}
+							onTapToAdd={isTouch ? handleTapToAdd : undefined}
 						/>
 					</div>
 					<OutfitCanvas
@@ -167,7 +218,7 @@ export const BuilderPage = () => {
 					<div className="builder-page__actions">
 						<button
 							className="builder-page__btn builder-page__btn--suggest"
-							onClick={handleSuggest}
+							onClick={() => handleSuggest()}
 							disabled={suggestionLoading}
 						>
 							{suggestionLoading ? 'Suggesting...' : 'Suggest'}

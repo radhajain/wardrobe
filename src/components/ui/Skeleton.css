@@ -1,0 +1,63 @@
+.skeleton {
+	background-color: var(--color-background-alt);
+	display: block;
+}
+
+.skeleton--text {
+	height: 1em;
+	border-radius: var(--radius-sm);
+}
+
+.skeleton--rectangular {
+	border-radius: 0;
+}
+
+.skeleton--circular {
+	border-radius: 50%;
+}
+
+/* Pulse animation */
+.skeleton--pulse {
+	animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+	0% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.4;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+/* Wave animation */
+.skeleton--wave {
+	position: relative;
+	overflow: hidden;
+}
+
+.skeleton--wave::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	transform: translateX(-100%);
+	background: linear-gradient(
+		90deg,
+		transparent,
+		rgba(255, 255, 255, 0.3),
+		transparent
+	);
+	animation: skeleton-wave 1.5s infinite;
+}
+
+@keyframes skeleton-wave {
+	100% {
+		transform: translateX(100%);
+	}
+}

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { ClothesWithId, OutfitItem, CropSettings } from '../../types';
 import { ImageEditor } from './ImageEditor';
 import './CanvasItem.css';
@@ -10,6 +10,26 @@ interface CanvasItemProps {
 	onDelete: () => void;
 }
 
+interface Point {
+	x: number;
+	y: number;
+}
+
+/**
+ * Get client coordinates from mouse or touch event
+ */
+const getEventCoordinates = (
+	e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent
+): Point => {
+	if ('touches' in e && e.touches.length > 0) {
+		return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+	}
+	if ('changedTouches' in e && e.changedTouches.length > 0) {
+		return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+	}
+	return { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY };
+};
+
 export const CanvasItem = ({
 	item,
 	clothes,
@@ -20,122 +40,187 @@ export const CanvasItem = ({
 	const [isResizing, setIsResizing] = useState(false);
 	const [showEditor, setShowEditor] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
-	const startPosRef = useRef({ x: 0, y: 0 });
+	const startPosRef = useRef<Point>({ x: 0, y: 0 });
 	const startSizeRef = useRef({ width: 0, height: 0 });
+	const currentCornerRef = useRef<string>('');
+	const itemPositionRef = useRef(item.position);
+
+	// Keep ref in sync with prop
+	useEffect(() => {
+		itemPositionRef.current = item.position;
+	}, [item.position]);
 
 	// Use custom image if available, otherwise use the original
 	const displayImageUrl = item.customImageUrl || clothes.imageUrl;
 
-	const handleMouseDown = useCallback(
-		(e: React.MouseEvent) => {
+	// --- DRAG HANDLERS ---
+	const handleDragStart = useCallback(
+		(e: React.MouseEvent | React.TouchEvent) => {
+			const target = e.target as HTMLElement;
 			if (
-				(e.target as HTMLElement).classList.contains('canvas-item__handle') ||
-				(e.target as HTMLElement).closest('.canvas-item__controls')
+				target.classList.contains('canvas-item__handle') ||
+				target.closest('.canvas-item__controls')
 			) {
 				return;
 			}
 			e.preventDefault();
 			setIsDragging(true);
+
+			const coords = getEventCoordinates(e);
 			startPosRef.current = {
-				x: e.clientX - item.position.x,
-				y: e.clientY - item.position.y,
+				x: coords.x - item.position.x,
+				y: coords.y - item.position.y,
 			};
-
-			const handleMouseMove = (moveEvent: MouseEvent) => {
-				const newX = moveEvent.clientX - startPosRef.current.x;
-				const newY = moveEvent.clientY - startPosRef.current.y;
-				onUpdate({
-					position: {
-						...item.position,
-						x: Math.max(0, newX),
-						y: Math.max(0, newY),
-					},
-				});
-			};
-
-			const handleMouseUp = () => {
-				setIsDragging(false);
-				document.removeEventListener('mousemove', handleMouseMove);
-				document.removeEventListener('mouseup', handleMouseUp);
-			};
-
-			document.addEventListener('mousemove', handleMouseMove);
-			document.addEventListener('mouseup', handleMouseUp);
 		},
-		[item.position, onUpdate]
+		[item.position]
 	);
 
-	const handleResize = useCallback(
-		(e: React.MouseEvent, corner: string) => {
+	const handleDragMove = useCallback(
+		(e: MouseEvent | TouchEvent) => {
+			if (!isDragging) return;
+			e.preventDefault();
+
+			const coords = getEventCoordinates(e);
+			const newX = coords.x - startPosRef.current.x;
+			const newY = coords.y - startPosRef.current.y;
+
+			onUpdate({
+				position: {
+					...itemPositionRef.current,
+					x: Math.max(0, newX),
+					y: Math.max(0, newY),
+				},
+			});
+		},
+		[isDragging, onUpdate]
+	);
+
+	const handleDragEnd = useCallback(() => {
+		setIsDragging(false);
+	}, []);
+
+	// --- RESIZE HANDLERS ---
+	const handleResizeStart = useCallback(
+		(e: React.MouseEvent | React.TouchEvent, corner: string) => {
 			e.preventDefault();
 			e.stopPropagation();
 			setIsResizing(true);
-			startPosRef.current = { x: e.clientX, y: e.clientY };
+			currentCornerRef.current = corner;
+
+			const coords = getEventCoordinates(e);
+			startPosRef.current = coords;
 			startSizeRef.current = {
 				width: item.position.width,
 				height: item.position.height,
 			};
+		},
+		[item.position]
+	);
+
+	const handleResizeMove = useCallback(
+		(e: MouseEvent | TouchEvent) => {
+			if (!isResizing) return;
+			e.preventDefault();
+
+			const coords = getEventCoordinates(e);
+			const deltaX = coords.x - startPosRef.current.x;
+			const deltaY = coords.y - startPosRef.current.y;
+			const corner = currentCornerRef.current;
 
 			const aspectRatio =
 				startSizeRef.current.width / startSizeRef.current.height;
 
-			const handleMouseMove = (moveEvent: MouseEvent) => {
-				const deltaX = moveEvent.clientX - startPosRef.current.x;
-				const deltaY = moveEvent.clientY - startPosRef.current.y;
+			let newWidth = startSizeRef.current.width;
+			let newHeight = startSizeRef.current.height;
+			let newX = itemPositionRef.current.x;
+			let newY = itemPositionRef.current.y;
 
-				let newWidth = startSizeRef.current.width;
-				let newHeight = startSizeRef.current.height;
-				let newX = item.position.x;
-				let newY = item.position.y;
-
-				if (corner.includes('e')) {
-					newWidth = Math.max(50, startSizeRef.current.width + deltaX);
+			if (corner.includes('e')) {
+				newWidth = Math.max(50, startSizeRef.current.width + deltaX);
+			}
+			if (corner.includes('w')) {
+				const widthDelta = -deltaX;
+				newWidth = Math.max(50, startSizeRef.current.width + widthDelta);
+				if (newWidth !== startSizeRef.current.width) {
+					newX = itemPositionRef.current.x - (newWidth - startSizeRef.current.width);
 				}
-				if (corner.includes('w')) {
-					const widthDelta = -deltaX;
-					newWidth = Math.max(50, startSizeRef.current.width + widthDelta);
-					if (newWidth !== startSizeRef.current.width) {
-						newX = item.position.x - widthDelta;
-					}
+			}
+			if (corner.includes('s')) {
+				newHeight = Math.max(50, startSizeRef.current.height + deltaY);
+			}
+			if (corner.includes('n')) {
+				const heightDelta = -deltaY;
+				newHeight = Math.max(50, startSizeRef.current.height + heightDelta);
+				if (newHeight !== startSizeRef.current.height) {
+					newY = itemPositionRef.current.y - (newHeight - startSizeRef.current.height);
 				}
-				if (corner.includes('s')) {
-					newHeight = Math.max(50, startSizeRef.current.height + deltaY);
-				}
-				if (corner.includes('n')) {
-					const heightDelta = -deltaY;
-					newHeight = Math.max(50, startSizeRef.current.height + heightDelta);
-					if (newHeight !== startSizeRef.current.height) {
-						newY = item.position.y - heightDelta;
-					}
-				}
+			}
 
-				// Maintain aspect ratio for corner resizes
-				if (corner.length === 2) {
-					newHeight = newWidth / aspectRatio;
-				}
+			// Maintain aspect ratio for corner resizes
+			if (corner.length === 2) {
+				newHeight = newWidth / aspectRatio;
+			}
 
-				onUpdate({
-					position: {
-						...item.position,
-						x: Math.max(0, newX),
-						y: Math.max(0, newY),
-						width: newWidth,
-						height: newHeight,
-					},
-				});
-			};
-
-			const handleMouseUp = () => {
-				setIsResizing(false);
-				document.removeEventListener('mousemove', handleMouseMove);
-				document.removeEventListener('mouseup', handleMouseUp);
-			};
-
-			document.addEventListener('mousemove', handleMouseMove);
-			document.addEventListener('mouseup', handleMouseUp);
+			onUpdate({
+				position: {
+					...itemPositionRef.current,
+					x: Math.max(0, newX),
+					y: Math.max(0, newY),
+					width: newWidth,
+					height: newHeight,
+				},
+			});
 		},
-		[item.position, onUpdate]
+		[isResizing, onUpdate]
 	);
+
+	const handleResizeEnd = useCallback(() => {
+		setIsResizing(false);
+		currentCornerRef.current = '';
+	}, []);
+
+	// --- EVENT LISTENER MANAGEMENT ---
+	useEffect(() => {
+		if (isDragging) {
+			const moveHandler = (e: MouseEvent | TouchEvent) => handleDragMove(e);
+			const endHandler = () => handleDragEnd();
+
+			document.addEventListener('mousemove', moveHandler);
+			document.addEventListener('mouseup', endHandler);
+			document.addEventListener('touchmove', moveHandler, { passive: false });
+			document.addEventListener('touchend', endHandler);
+			document.addEventListener('touchcancel', endHandler);
+
+			return () => {
+				document.removeEventListener('mousemove', moveHandler);
+				document.removeEventListener('mouseup', endHandler);
+				document.removeEventListener('touchmove', moveHandler);
+				document.removeEventListener('touchend', endHandler);
+				document.removeEventListener('touchcancel', endHandler);
+			};
+		}
+	}, [isDragging, handleDragMove, handleDragEnd]);
+
+	useEffect(() => {
+		if (isResizing) {
+			const moveHandler = (e: MouseEvent | TouchEvent) => handleResizeMove(e);
+			const endHandler = () => handleResizeEnd();
+
+			document.addEventListener('mousemove', moveHandler);
+			document.addEventListener('mouseup', endHandler);
+			document.addEventListener('touchmove', moveHandler, { passive: false });
+			document.addEventListener('touchend', endHandler);
+			document.addEventListener('touchcancel', endHandler);
+
+			return () => {
+				document.removeEventListener('mousemove', moveHandler);
+				document.removeEventListener('mouseup', endHandler);
+				document.removeEventListener('touchmove', moveHandler);
+				document.removeEventListener('touchend', endHandler);
+				document.removeEventListener('touchcancel', endHandler);
+			};
+		}
+	}, [isResizing, handleResizeMove, handleResizeEnd]);
 
 	const handleEditorSave = (result: {
 		imageUrl?: string;
@@ -160,7 +245,8 @@ export const CanvasItem = ({
 					height: item.position.height,
 					zIndex: item.position.zIndex,
 				}}
-				onMouseDown={handleMouseDown}
+				onMouseDown={handleDragStart}
+				onTouchStart={handleDragStart}
 			>
 				{displayImageUrl ? (
 					<img
@@ -208,22 +294,26 @@ export const CanvasItem = ({
 					</button>
 				</div>
 
-				{/* Resize handles */}
+				{/* Resize handles with touch support */}
 				<div
 					className="canvas-item__handle canvas-item__handle--nw"
-					onMouseDown={(e) => handleResize(e, 'nw')}
+					onMouseDown={(e) => handleResizeStart(e, 'nw')}
+					onTouchStart={(e) => handleResizeStart(e, 'nw')}
 				/>
 				<div
 					className="canvas-item__handle canvas-item__handle--ne"
-					onMouseDown={(e) => handleResize(e, 'ne')}
+					onMouseDown={(e) => handleResizeStart(e, 'ne')}
+					onTouchStart={(e) => handleResizeStart(e, 'ne')}
 				/>
 				<div
 					className="canvas-item__handle canvas-item__handle--sw"
-					onMouseDown={(e) => handleResize(e, 'sw')}
+					onMouseDown={(e) => handleResizeStart(e, 'sw')}
+					onTouchStart={(e) => handleResizeStart(e, 'sw')}
 				/>
 				<div
 					className="canvas-item__handle canvas-item__handle--se"
-					onMouseDown={(e) => handleResize(e, 'se')}
+					onMouseDown={(e) => handleResizeStart(e, 'se')}
+					onTouchStart={(e) => handleResizeStart(e, 'se')}
 				/>
 			</div>
 

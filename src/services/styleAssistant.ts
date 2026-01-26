@@ -181,16 +181,18 @@ Respond as the style assistant. Remember to include [ID:X] when referencing spec
 }
 
 /**
- * Gets outfit suggestions for the Builder based on current canvas items
+ * Gets outfit suggestions for the Builder based on current canvas items and optional occasion
  */
 export async function getOutfitSuggestions(
 	wardrobe: ClothesWithId[],
-	currentItemIds: ClothesId[]
+	currentItemIds: ClothesId[],
+	occasion?: string
 ): Promise<OutfitSuggestion> {
 	// Record this as a query for memory bank
-	recordQuery('Requesting outfit suggestions in builder', 'builder').catch(
-		console.error
-	);
+	const queryDescription = occasion
+		? `Requesting outfit suggestions for: ${occasion}`
+		: 'Requesting outfit suggestions in builder';
+	recordQuery(queryDescription, 'builder').catch(console.error);
 
 	const wardrobeContext = buildWardrobeContext(wardrobe);
 	const userContext = buildUserContext();
@@ -207,18 +209,27 @@ export async function getOutfitSuggestions(
 					.join('\n')
 			: 'No items selected yet';
 
+	const occasionContext = occasion
+		? `\nOCCASION/CONTEXT: ${occasion}\nPlease suggest an outfit specifically suited for this occasion. Consider weather, formality, and practical needs mentioned.`
+		: '';
+
 	const prompt = `${getSystemPrompt(wardrobeContext, userContext)}
 
 CURRENT OUTFIT IN PROGRESS:
 ${currentItemsText}
+${occasionContext}
 
-Based on the items currently in the outfit (if any), suggest complementary pieces from the wardrobe that would complete or enhance this outfit. If no items are selected, suggest a complete outfit.
+${
+	occasion
+		? `Create a complete outfit from the wardrobe that would be perfect for: "${occasion}". Consider all aspects mentioned (weather, occasion type, activities, etc.).`
+		: 'Based on the items currently in the outfit (if any), suggest complementary pieces from the wardrobe that would complete or enhance this outfit. If no items are selected, suggest a complete outfit.'
+}
 
 Respond with:
-- explanation: Brief explanation of why these pieces work together
+- explanation: Brief explanation of why these pieces work together${occasion ? ' and why they suit the occasion' : ''}
 - suggestedItemIds: Array of item IDs (numbers) that would work well together
 
-Only include item IDs that exist in the wardrobe. Suggest 2-5 items that would work well together.`;
+Only include item IDs that exist in the wardrobe. Suggest 3-6 items that would create a complete, cohesive outfit.`;
 
 	const result = await generateStructured({
 		prompt,
