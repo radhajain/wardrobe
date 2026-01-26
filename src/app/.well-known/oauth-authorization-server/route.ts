@@ -14,7 +14,15 @@ const corsHandler = metadataCorsOptionsRequestHandler();
 
 export async function GET() {
   try {
-    return await clerkHandler();
+    const response = await clerkHandler();
+    if (!response) {
+      console.error("clerkHandler returned undefined");
+      return NextResponse.json(
+        { error: "OAuth metadata unavailable" },
+        { status: 500 }
+      );
+    }
+    return response;
   } catch (error) {
     console.error("OAuth authorization server metadata error:", error);
     return NextResponse.json(
@@ -25,10 +33,16 @@ export async function GET() {
 }
 
 export function OPTIONS() {
-  try {
-    return corsHandler();
-  } catch (error) {
-    console.error("CORS handler error:", error);
-    return new NextResponse(null, { status: 204 });
+  const response = corsHandler();
+  if (!response) {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+      },
+    });
   }
+  return response;
 }

@@ -19,7 +19,15 @@ const corsHandler = metadataCorsOptionsRequestHandler();
 
 export async function GET(request: NextRequest) {
   try {
-    return await clerkHandler(request);
+    const response = await clerkHandler(request);
+    if (!response) {
+      console.error("protectedResourceHandlerClerk returned undefined");
+      return NextResponse.json(
+        { error: "OAuth metadata unavailable" },
+        { status: 500 }
+      );
+    }
+    return response;
   } catch (error) {
     console.error("Protected resource metadata error:", error);
     return NextResponse.json(
@@ -29,11 +37,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function OPTIONS() {
-  try {
-    return corsHandler();
-  } catch (error) {
-    console.error("CORS handler error:", error);
-    return new NextResponse(null, { status: 204 });
+export function OPTIONS() {
+  const response = corsHandler();
+  if (!response) {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+      },
+    });
   }
+  return response;
 }
