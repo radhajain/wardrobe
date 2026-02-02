@@ -19,9 +19,19 @@ export const OutfitsPage = () => {
   return (
     <div className="outfits-page">
       <div className="outfits-page__header">
-        <h1 className="outfits-page__title">My Outfits</h1>
-        {!loading && (
-          <p className="outfits-page__count">{outfits.length} outfits</p>
+        <div className="outfits-page__header-left">
+          <h1 className="outfits-page__title">My Outfits</h1>
+          {!loading && (
+            <p className="outfits-page__count">{outfits.length} outfits</p>
+          )}
+        </div>
+        {!loading && outfits.length > 0 && (
+          <button
+            className="outfits-page__create-btn"
+            onClick={() => navigate("/builder")}
+          >
+            Create New
+          </button>
         )}
       </div>
       {loading ? (

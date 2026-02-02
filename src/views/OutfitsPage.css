@@ -6,9 +6,15 @@
 
 .outfits-page__header {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-xl);
+}
+
+.outfits-page__header-left {
+  display: flex;
   align-items: baseline;
   gap: var(--spacing-md);
-  margin-bottom: var(--spacing-xl);
 }
 
 .outfits-page__title {

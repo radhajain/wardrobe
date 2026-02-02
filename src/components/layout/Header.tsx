@@ -84,18 +84,6 @@ export const Header = () => {
             </li>
             <li>
               <NavLink
-                to="/builder"
-                className={({ isActive }) =>
-                  isActive
-                    ? "header__link header__link--active"
-                    : "header__link"
-                }
-              >
-                Builder
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
                 to="/stylist"
                 className={({ isActive }) =>
                   isActive

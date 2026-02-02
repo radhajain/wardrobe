@@ -11,6 +11,25 @@
   color: var(--color-text-secondary);
 }
 
+.wardrobe-panel__search {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  background-color: var(--color-surface);
+  transition: border-color var(--transition-fast);
+}
+
+.wardrobe-panel__search:focus {
+  outline: none;
+  border-color: var(--color-text-secondary);
+}
+
+.wardrobe-panel__search::placeholder {
+  color: var(--color-text-muted);
+}
+
 .wardrobe-panel__hint {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
@@ -21,6 +40,14 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--spacing-md);
+}
+
+.wardrobe-panel__empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-lg) 0;
 }
 
 @media (min-width: 768px) {
